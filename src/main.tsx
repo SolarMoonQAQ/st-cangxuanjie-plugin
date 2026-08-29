@@ -1,8 +1,10 @@
 import { createRoot, type Root } from 'react-dom/client'
 import App from './App.tsx'
 import { startBeautify } from '@/beautify/dialogue'
+import pluginCss from './index.css?inline'
 
 const CONTAINER_ID = 'tavern-cangxuanjie-root'
+const STYLE_ID = 'cangxuanjie-plugin-style'
 
 let root: Root | null = null
 let container: HTMLElement | null = null
@@ -21,6 +23,12 @@ $(() => {
 
     toastr.success('苍玄界插件已加载')
 
+    $(`#${STYLE_ID}`).remove()
+    $('<style>')
+        .attr('id', STYLE_ID)
+        .text(pluginCss)
+        .appendTo('head')
+
     stopBeautify = startBeautify()
 })
 
@@ -31,6 +39,7 @@ $(window).on('pagehide', () => {
     root = null
     container = null
 
+    $(`#${STYLE_ID}`).remove()
     stopBeautify?.()
     stopBeautify = null
 })
