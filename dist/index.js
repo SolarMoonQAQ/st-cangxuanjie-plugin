@@ -8070,61 +8070,46 @@ function p() {
 }
 //#endregion
 //#region src/beautify/dialogue.ts
-var m = /* @__PURE__ */ new Map(), h = /^【([^】\r\n]+)】\s*[：:]\s*[“"]([\s\S]*?)[”"]\s*$/;
-function g(e) {
-	if (e.querySelector("[data-cangxuan-dialogue]")) return;
-	let t = e.innerHTML, n = e.ownerDocument, r = Array.from(e.querySelectorAll("p")), i = r.length > 0 ? r : [e], a = !1;
-	for (let e of i) {
-		let t = (e.textContent?.trim() ?? "").match(h);
+var m = /^【([^】\r\n]+)】\s*[：:]\s*[“"]([\s\S]*?)[”"]\s*$/;
+function h(e) {
+	let t = Array.from(e.querySelectorAll("p")), n = t.length > 0 ? t : [e];
+	for (let e of n) {
+		if (e.dataset.cangxuanDialogue !== void 0) continue;
+		let t = e.textContent?.trim().match(m);
 		if (!t) continue;
-		let [, r, i] = t, o = n.createElement("span");
-		o.dataset.cangxuanDialogue = "", o.style.cssText = [
-			"display:block",
+		let [, n, r] = t, i = e.ownerDocument, a = i.createElement("strong");
+		a.textContent = n.trim(), a.style.cssText = "display:block;color:#e5bd68;margin-bottom:0.3em";
+		let o = i.createElement("span");
+		o.textContent = r.trim(), o.style.cssText = "display:block;white-space:pre-wrap", e.dataset.cangxuanDialogue = "", e.style.cssText = [
 			"margin:0.6em 0",
 			"padding:0.65em 0.8em",
 			"border-left:3px solid #d2a84b",
 			"border-radius:4px",
 			"background:rgba(30,30,30,0.35)"
-		].join(";");
-		let s = n.createElement("span");
-		s.textContent = r.trim(), s.style.cssText = "display:block;font-weight:700;color:#e5bd68;margin-bottom:0.3em";
-		let c = n.createElement("span");
-		c.textContent = i.trim(), c.style.cssText = "display:block;white-space:pre-wrap", o.append(s, c), e.replaceChildren(o), a = !0;
+		].join(";"), e.replaceChildren(a, o);
 	}
-	a && m.set(e, t);
 }
-function _(e) {
-	setTimeout(() => {
-		let t = retrieveDisplayedMessage(e)[0];
-		t && g(t);
-	}, 0);
+function g(e) {
+	let t = retrieveDisplayedMessage(e)[0];
+	t && h(t);
 }
-function v() {
-	let e = () => {
-		$(".mes_text").each((e, t) => {
-			g(t);
-		});
-	};
-	setTimeout(e, 0);
-	let t = [
-		eventOn(tavern_events.CHARACTER_MESSAGE_RENDERED, _),
-		eventOn(tavern_events.USER_MESSAGE_RENDERED, _),
-		eventOn(tavern_events.MESSAGE_UPDATED, _),
-		eventOn(tavern_events.MESSAGE_SWIPED, _),
-		eventOn(tavern_events.MORE_MESSAGES_LOADED, e)
+function _() {
+	$(".mes_text").each((e, t) => {
+		h(t);
+	});
+	let e = [
+		eventOn(tavern_events.CHARACTER_MESSAGE_RENDERED, g),
+		eventOn(tavern_events.USER_MESSAGE_RENDERED, g),
+		eventOn(tavern_events.MESSAGE_UPDATED, g)
 	];
-	return () => {
-		t.forEach((e) => e.stop());
-		for (let [e, t] of m) e.isConnected && (e.innerHTML = t);
-		m.clear();
-	};
+	return () => e.forEach((e) => e.stop());
 }
 //#endregion
 //#region src/main.tsx
-var y = "tavern-cangxuanjie-root", b = null, x = null, ee = null;
+var v = "tavern-cangxuanjie-root", y = null, b = null, x = null;
 $(() => {
-	$(`#${y}`).remove(), x = $("<div>").attr("id", y).appendTo("body")[0], b = (0, d.createRoot)(x), b.render(/* @__PURE__ */ (0, f.jsx)(p, {})), toastr.success("苍玄界插件已加载"), ee = v();
+	$(`#${v}`).remove(), b = $("<div>").attr("id", v).appendTo("body")[0], y = (0, d.createRoot)(b), y.render(/* @__PURE__ */ (0, f.jsx)(p, {})), toastr.success("苍玄界插件已加载"), x = _();
 }), $(window).on("pagehide", () => {
-	b?.unmount(), x?.remove(), b = null, x = null, ee?.(), ee = null;
+	y?.unmount(), b?.remove(), y = null, b = null, x?.(), x = null;
 });
 //#endregion
