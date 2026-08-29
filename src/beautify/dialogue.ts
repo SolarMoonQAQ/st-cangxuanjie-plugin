@@ -15,20 +15,14 @@ function beautifyElement(element: HTMLElement) {
 
         const name = document.createElement('strong')
         name.textContent = speaker.trim()
-        name.style.cssText = 'display:block;color:#e5bd68;margin-bottom:0.3em'
+        name.className = 'cx-dialogue-name'
 
         const content = document.createElement('span')
         content.textContent = dialogueText.trim()
-        content.style.cssText = 'display:block;white-space:pre-wrap'
+        content.className = 'cx-dialogue-content'
 
         candidate.dataset.cangxuanDialogue = ''
-        candidate.style.cssText = [
-            'margin:0.6em 0',
-            'padding:0.65em 0.8em',
-            'border-left:3px solid #d2a84b',
-            'border-radius:4px',
-            'background:rgba(30,30,30,0.35)',
-        ].join(';')
+        candidate.classList.add('cx-dialogue')
         candidate.replaceChildren(name, content)
     }
 }

@@ -8078,15 +8078,9 @@ function h(e) {
 		let t = e.textContent?.trim().match(m);
 		if (!t) continue;
 		let [, n, r] = t, i = e.ownerDocument, a = i.createElement("strong");
-		a.textContent = n.trim(), a.style.cssText = "display:block;color:#e5bd68;margin-bottom:0.3em";
+		a.textContent = n.trim(), a.className = "cx-dialogue-name";
 		let o = i.createElement("span");
-		o.textContent = r.trim(), o.style.cssText = "display:block;white-space:pre-wrap", e.dataset.cangxuanDialogue = "", e.style.cssText = [
-			"margin:0.6em 0",
-			"padding:0.65em 0.8em",
-			"border-left:3px solid #d2a84b",
-			"border-radius:4px",
-			"background:rgba(30,30,30,0.35)"
-		].join(";"), e.replaceChildren(a, o);
+		o.textContent = r.trim(), o.className = "cx-dialogue-content", e.dataset.cangxuanDialogue = "", e.classList.add("cx-dialogue"), e.replaceChildren(a, o);
 	}
 }
 function g(e) {

@@ -1,0 +1,40 @@
+@import "tailwindcss";
+
+#chat {
+    --cx-dialogue-bg: color-mix(
+            in srgb,
+            var(--SmartThemeBlurTintColor, #222) 75%,
+            transparent
+    );
+    --cx-dialogue-accent: var(--SmartThemeQuoteColor, #d2a84b);
+    --cx-dialogue-name: var(--SmartThemeQuoteColor, #e5bd68);
+}
+
+[data-cangxuan-theme="light"] {
+    --cx-dialogue-bg: rgb(245 245 245 / 90%);
+    --cx-dialogue-accent: #8a641d;
+    --cx-dialogue-name: #75500d;
+}
+
+[data-cangxuan-theme="dark"] {
+    --cx-dialogue-bg: rgb(30 30 30 / 75%);
+    --cx-dialogue-accent: #d2a84b;
+    --cx-dialogue-name: #e5bd68;
+}
+
+@layer components {
+    .cx-dialogue {
+        @apply my-2 rounded px-3 py-2;
+        border-left: 3px solid var(--cx-dialogue-accent);
+        background: var(--cx-dialogue-bg);
+    }
+
+    .cx-dialogue-name {
+        @apply mb-1 block font-bold;
+        color: var(--cx-dialogue-name);
+    }
+
+    .cx-dialogue-content {
+        @apply block whitespace-pre-wrap;
+    }
+}
