@@ -8069,11 +8069,63 @@ function p() {
 	});
 }
 //#endregion
+//#region src/beautify/dialogue.ts
+var m = /* @__PURE__ */ new Map(), h = /【([^】\r\n]+)】\s*[：:]\s*[“"]([\s\S]*?)[”"]/g;
+function g(e) {
+	if (e.querySelector("[data-cangxuan-dialogue]")) return;
+	let t = e.innerHTML, n = e.ownerDocument, r = n.createTreeWalker(e, 4), i = [];
+	for (; r.nextNode();) i.push(r.currentNode);
+	let a = !1;
+	for (let e of i) {
+		let t = e.data, r = [...t.matchAll(h)];
+		if (r.length === 0) continue;
+		let i = n.createDocumentFragment(), o = 0;
+		for (let e of r) {
+			let r = e.index ?? 0, [, a, s] = e;
+			i.append(t.slice(o, r));
+			let c = n.createElement("span");
+			c.dataset.cangxuanDialogue = "", c.style.cssText = [
+				"display:block",
+				"margin:0.6em 0",
+				"padding:0.65em 0.8em",
+				"border-left:3px solid #d2a84b",
+				"border-radius:4px",
+				"background:rgba(30,30,30,0.35)"
+			].join(";");
+			let l = n.createElement("span");
+			l.textContent = a.trim(), l.style.cssText = "display:block;font-weight:700;color:#e5bd68;margin-bottom:0.3em";
+			let u = n.createElement("span");
+			u.textContent = s.trim(), u.style.cssText = "display:block;white-space:pre-wrap", c.append(l, u), i.append(c), o = r + e[0].length;
+		}
+		i.append(t.slice(o)), e.replaceWith(i), a = !0;
+	}
+	a && m.set(e, t);
+}
+function _(e) {
+	let t = retrieveDisplayedMessage(e).find(".mes_text")[0];
+	t && g(t);
+}
+function v() {
+	$(".mes_text").each((e, t) => {
+		g(t);
+	});
+	let e = [
+		eventOn(tavern_events.CHARACTER_MESSAGE_RENDERED, _),
+		eventOn(tavern_events.USER_MESSAGE_RENDERED, _),
+		eventOn(tavern_events.MESSAGE_UPDATED, _)
+	];
+	return () => {
+		e.forEach((e) => e.stop());
+		for (let [e, t] of m) e.isConnected && (e.innerHTML = t);
+		m.clear();
+	};
+}
+//#endregion
 //#region src/main.tsx
-var m = "tavern-cangxuanjie-root", h = null, g = null;
+var y = "tavern-cangxuanjie-root", b = null, x = null, ee = null;
 $(() => {
-	$(`#${m}`).remove(), g = $("<div>").attr("id", m).appendTo("body")[0], h = (0, d.createRoot)(g), h.render(/* @__PURE__ */ (0, f.jsx)(p, {})), toastr.success("苍玄界插件已加载");
+	$(`#${y}`).remove(), x = $("<div>").attr("id", y).appendTo("body")[0], b = (0, d.createRoot)(x), b.render(/* @__PURE__ */ (0, f.jsx)(p, {})), toastr.success("苍玄界插件已加载"), ee = v();
 }), $(window).on("pagehide", () => {
-	h?.unmount(), g?.remove(), h = null, g = null;
+	b?.unmount(), x?.remove(), b = null, x = null, ee?.(), ee = null;
 });
 //#endregion
