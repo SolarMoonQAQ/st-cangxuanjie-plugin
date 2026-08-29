@@ -2,7 +2,7 @@
   "type": "script",
   "enabled": true,
   "name": "苍玄界插件",
-  "id": "c7a8e104-58b2-4d56-9a21-4f1e09c8ab12",
+  "id": "42e73131-db92-4b2f-9d13-f53aca497a27",
   "content": "import 'https://gcore.jsdelivr.net/gh/SolarMoonQAQ/st-cangxuanjie-plugin@master/dist/index.js'",
   "info": "苍玄界插件",
   "button": {

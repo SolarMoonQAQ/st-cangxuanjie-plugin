@@ -7,7 +7,6 @@ let root: Root | null = null
 let container: HTMLElement | null = null
 
 $(() => {
-    // `$` 操作的是酒馆主页面，适合把插件界面挂到酒馆中
     $(`#${CONTAINER_ID}`).remove()
 
     container = $('<div>')
