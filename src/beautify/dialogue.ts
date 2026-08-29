@@ -68,10 +68,11 @@ function beautifyElement(element: HTMLElement) {
 }
 
 function beautifyMessage(messageId: number) {
-    const element = retrieveDisplayedMessage(messageId)
-        .find('.mes_text')[0] as HTMLElement | undefined
+    const element = retrieveDisplayedMessage(messageId)[0]
 
-    if (element) beautifyElement(element)
+    if (element) {
+        beautifyElement(element)
+    }
 }
 
 export function startBeautify() {
