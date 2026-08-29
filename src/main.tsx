@@ -1,10 +1,13 @@
 import { createRoot, type Root } from 'react-dom/client'
 import App from './App.tsx'
+import { startBeautify } from '@/beautify/dialogue'
 
 const CONTAINER_ID = 'tavern-cangxuanjie-root'
 
 let root: Root | null = null
 let container: HTMLElement | null = null
+
+let stopBeautify: (() => void) | null = null
 
 $(() => {
     $(`#${CONTAINER_ID}`).remove()
@@ -17,6 +20,8 @@ $(() => {
     root.render(<App />)
 
     toastr.success('苍玄界插件已加载')
+
+    stopBeautify = startBeautify()
 })
 
 $(window).on('pagehide', () => {
@@ -25,4 +30,7 @@ $(window).on('pagehide', () => {
 
     root = null
     container = null
+
+    stopBeautify?.()
+    stopBeautify = null
 })
