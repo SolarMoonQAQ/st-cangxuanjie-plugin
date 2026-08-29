@@ -20383,17 +20383,41 @@ var e = (e, t) => () => (t || (e((t = { exports: {} }).exports, t), e = null), t
 	t.exports = process.env.NODE_ENV === "production" ? p() : m();
 })), g = f(), _ = r(), v = h();
 function y() {
-	let [e] = (0, _.useState)("这是固定替换的文本"), [t] = (0, _.useState)(!0);
+	let [e, t] = (0, _.useState)("这是固定替换的文本"), [n, r] = (0, _.useState)(!0);
 	return (0, _.useEffect)(() => {
-		if (!t) return;
-		let n = eventOn(tavern_events.CHARACTER_MESSAGE_RENDERED, () => {
+		if (!n) return;
+		let t = eventOn(tavern_events.CHARACTER_MESSAGE_RENDERED, () => {
 			let t = document.querySelectorAll(".mes_text"), n = t[t.length - 1];
 			n && (n.innerText = e);
 		});
 		return () => {
-			n.stop();
+			t.stop();
 		};
-	}, [t, e]), /* @__PURE__ */ (0, v.jsx)("div", {});
+	}, [n, e]), /* @__PURE__ */ (0, v.jsxs)("div", {
+		style: {
+			position: "fixed",
+			top: "10px",
+			right: "10px",
+			zIndex: 9999,
+			background: "#222",
+			color: "#fff",
+			padding: "10px",
+			borderRadius: "8px"
+		},
+		children: [/* @__PURE__ */ (0, v.jsxs)("label", { children: [/* @__PURE__ */ (0, v.jsx)("input", {
+			type: "checkbox",
+			checked: n,
+			onChange: (e) => r(e.target.checked)
+		}), "启用固定文本替换"] }), /* @__PURE__ */ (0, v.jsx)("input", {
+			type: "text",
+			value: e,
+			onChange: (e) => t(e.target.value),
+			style: {
+				display: "block",
+				marginTop: "5px"
+			}
+		})]
+	});
 }
 //#endregion
 //#region src/main.tsx
