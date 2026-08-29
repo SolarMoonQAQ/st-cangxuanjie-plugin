@@ -8102,7 +8102,7 @@ function g(e) {
 	a && m.set(e, t);
 }
 function _(e) {
-	let t = retrieveDisplayedMessage(e).find(".mes_text")[0];
+	let t = retrieveDisplayedMessage(e)[0];
 	t && g(t);
 }
 function v() {
