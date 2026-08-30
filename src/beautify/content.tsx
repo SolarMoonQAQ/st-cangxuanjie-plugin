@@ -25,7 +25,7 @@ const contentPrompt = {
 `,
 }
 
-const CONTENT_BLOCK_PATTERN = /<div\b[^>]*data-cx-content[^>]*>([\s\S]*?)<\/div>/i
+const CONTENT_BLOCK_PATTERN = /<content\b[^>]*>([\s\S]*?)<\/content>/i
 
 type RenderState = {
     mesText: HTMLElement
@@ -89,7 +89,7 @@ function renderMessage(messageId: number) {
 
     if (!content) return
 
-    const contentHost = mesText.querySelector<HTMLElement>('[data-cx-content]')
+    const contentHost = mesText.querySelector<HTMLElement>('content')
 
     if (!contentHost) {
         console.warn(`[苍玄界] 找不到 content 节点，第 ${messageId} 楼跳过渲染`)

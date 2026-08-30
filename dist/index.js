@@ -10492,7 +10492,7 @@ var Kn = {
 	role: "system",
 	should_scan: !1,
 	content: "\n输出时必须遵守以下格式：\n\n1. 所有面向用户展示的正文内容，包括旁白、动作、环境描写、角色对话，都必须放在唯一的一对 <content> 和 </content> 标签内。\n2. 除了 <content>...</content> 外，不要输出任何正文内容。\n3. 不要遗漏标签，不要嵌套 content 标签。\n4. 不要把标签放进 Markdown 代码块中。\n\n格式示例：\n\n<content>\n这里是完整的正文内容。\n</content>\n"
-}, qn = /<div\b[^>]*data-cx-content[^>]*>([\s\S]*?)<\/div>/i, Jn = /* @__PURE__ */ new Map();
+}, qn = /<content\b[^>]*>([\s\S]*?)<\/content>/i, Jn = /* @__PURE__ */ new Map();
 function Yn() {
 	let e = null, t = () => {
 		e?.(), e = injectPrompts([Kn]).uninject;
@@ -10516,7 +10516,7 @@ function Zn(e) {
 	if (!n) return;
 	let r = Xn(e);
 	if (!r) return;
-	let i = n.querySelector("[data-cx-content]");
+	let i = n.querySelector("content");
 	if (!i) {
 		console.warn(`[苍玄界] 找不到 content 节点，第 ${e} 楼跳过渲染`);
 		return;
