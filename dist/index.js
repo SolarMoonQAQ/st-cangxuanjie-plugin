@@ -10522,8 +10522,8 @@ var qn = {
 	role: "system",
 	should_scan: !1,
 	content: "\n输出时必须遵守以下格式：\n\n1. 所有面向用户展示的正文内容，包括旁白、动作、环境描写、角色对话，都必须放在唯一的一对 <div data-cx-content> 和 </div> 标签内。\n2. 除了 <div data-cx-content>...</div> 外，不要输出任何正文内容。\n3. 不要遗漏标签，不要嵌套 content 标签。\n4. 不要把标签放进 Markdown 代码块中。\n\n格式示例：\n\n<div data-cx-content>\n这里是完整的正文内容。\n</div>\n"
-}, Jn = /^【([^】\r\n]+)】\s*[：:]\s*[“"]([\s\S]*?)[”"]$/, Yn = /^【[^】\r\n]+】\s*[：:]\s*[“"]/, Xn = /[”"]\s*$/, Zn = /* @__PURE__ */ new Map(), Qn = /* @__PURE__ */ new Map(), $n = !1;
-function er() {
+}, Jn = /^【([^】\r\n]+)】\s*[：:]\s*[“"]([\s\S]*?)[”"]$/, Yn = /^【[^】\r\n]+】\s*[：:]\s*[“"]/, Xn = /[”"]\s*$/, Zn = /* @__PURE__ */ new Map(), Qn = !1;
+function $n() {
 	let e = null, t = () => {
 		e?.(), e = injectPrompts([qn]).uninject;
 	};
@@ -10533,27 +10533,21 @@ function er() {
 		n.forEach((e) => e.stop()), e?.(), e = null;
 	};
 }
-function tr(e) {
+function er(e) {
 	let t = retrieveDisplayedMessage(e)[0];
 	return t ? t.matches(".mes_text") ? t : t.querySelector(".mes_text") : null;
 }
-function nr(e) {
+function tr(e) {
 	return e.querySelector("[data-cx-content], content");
 }
-function rr(e) {
-	return Array.from(e.childNodes).filter((e) => e.nodeType === Node.TEXT_NODE ? !!e.textContent?.trim() : e.nodeType === Node.ELEMENT_NODE);
-}
-function ir(e) {
-	return rr(e).filter((e) => !(e instanceof HTMLElement && e.classList.contains("cx-react-mount")));
-}
-function ar(e) {
+function nr(e) {
 	let t = document.createTreeWalker(e, NodeFilter.SHOW_TEXT), n = [];
 	for (; t.nextNode();) n.push(t.currentNode);
 	return n;
 }
-function or(e, t, n) {
+function rr(e, t, n) {
 	let r = t;
-	for (let t of ar(e)) {
+	for (let t of nr(e)) {
 		if (r <= 0) break;
 		let e = Math.min(r, t.data.length), i = document.createRange();
 		i.setStart(t, 0), i.setEnd(t, e);
@@ -10561,9 +10555,9 @@ function or(e, t, n) {
 		a.className = n, i.surroundContents(a), r -= e;
 	}
 }
-function sr(e, t, n) {
+function ir(e, t, n) {
 	let r = t;
-	for (let t of ar(e).reverse()) {
+	for (let t of nr(e).reverse()) {
 		if (r <= 0) break;
 		let e = Math.min(r, t.data.length), i = document.createRange();
 		i.setStart(t, t.data.length - e), i.setEnd(t, t.data.length);
@@ -10571,62 +10565,48 @@ function sr(e, t, n) {
 		a.className = n, i.surroundContents(a), r -= e;
 	}
 }
-function cr(e, t) {
-	let n;
-	e instanceof HTMLElement ? n = e : (n = document.createElement("span"), e.parentNode?.replaceChild(n, e), n.appendChild(e));
-	let r = t.match(/^\s*/)?.[0].length ?? 0, i = t.trim().match(Yn)?.[0], a = t.match(Xn)?.[0];
-	return i && or(n, r + i.length, "cx-dialogue-prefix"), a && sr(n, a.length, "cx-dialogue-suffix"), n;
+function ar(e, t) {
+	if (!(e instanceof HTMLElement) || e.querySelector(".cx-dialogue-prefix, .cx-dialogue-suffix")) return;
+	let n = t.match(/^\s*/)?.[0].length ?? 0, r = t.trim().match(Yn)?.[0], i = t.match(Xn)?.[0];
+	r && rr(e, n + r.length, "cx-dialogue-prefix"), i && ir(e, i.length, "cx-dialogue-suffix");
 }
-function lr(e) {
-	return ir(e).map((e) => {
+function or(e) {
+	return Array.from(e.childNodes).filter((e) => e.nodeType === Node.TEXT_NODE ? !!e.textContent?.trim() : e.nodeType === Node.ELEMENT_NODE && e.classList.contains("cx-react-mount") ? !1 : e.nodeType === Node.ELEMENT_NODE).map((e) => {
 		let t = e.textContent ?? "", n = t.trim().match(Jn);
-		return n ? {
-			node: cr(e, t),
+		return n ? (ar(e, t), {
+			node: e,
 			speaker: n[1].trim()
-		} : { node: e };
+		}) : { node: e };
 	});
 }
-function ur(e) {
-	e.observer.disconnect(), e.root.unmount(), e.contentHost.isConnected && e.blocks.forEach((t) => {
+function sr(e) {
+	let t = e.mount.isConnected && e.contentHost.isConnected;
+	e.observer.disconnect(), e.root.unmount(), t && e.blocks.forEach((t) => {
 		e.contentHost.appendChild(t.node);
 	}), e.mount.remove();
 }
-function dr(e) {
-	let t = Zn.get(e);
-	t && (Zn.delete(e), ur(t));
+function cr(e) {
+	queueMicrotask(() => {
+		if (!Qn) return;
+		let t = Zn.get(e);
+		t && t.mount.isConnected && t.contentHost.isConnected || lr(e);
+	});
 }
-function fr(e, t = !1) {
-	t && dr(e);
-	let n = Qn.get(e);
-	n !== void 0 && window.clearTimeout(n);
-	let r = window.setTimeout(() => {
-		Qn.delete(e), window.requestAnimationFrame(() => {
-			$n && pr(e);
-		});
-	}, 0);
-	Qn.set(e, r);
-}
-function pr(e) {
-	let t = tr(e);
-	if (!t) {
-		dr(e);
-		return;
-	}
-	let n = nr(t);
-	if (!n) {
-		dr(e);
-		return;
-	}
+function lr(e) {
+	let t = er(e);
+	if (!t) return;
+	let n = tr(t);
+	if (!n) return;
 	let r = Zn.get(e);
 	if (r && r.mesText === t && r.contentHost === n && r.mount.isConnected) return;
-	r && (Zn.delete(e), ur(r));
-	let i = lr(n);
+	r && (Zn.delete(e), sr(r));
+	let i = or(n);
 	if (i.length === 0) return;
 	let a = document.createElement("div");
 	a.className = "cx-react-mount", n.append(a);
 	let o = (0, g.createRoot)(a), s = new MutationObserver(() => {
 		let t = Zn.get(e);
-		(!t || !t.mount.isConnected || !t.contentHost.isConnected) && fr(e);
+		(!t || !t.mount.isConnected || !t.contentHost.isConnected) && cr(e);
 	}), c = {
 		mesText: t,
 		contentHost: n,
@@ -10643,27 +10623,27 @@ function pr(e) {
 		contentHost: n
 	}));
 }
-function mr() {
-	for (let e = 0; e < SillyTavern.chat.length; e++) fr(e);
+function ur() {
+	for (let e = 0; e < SillyTavern.chat.length; e++) lr(e);
 }
-function hr() {
-	$n = !0, mr();
+function dr() {
+	Qn = !0, ur();
 	let e = [
-		eventOn(tavern_events.CHAT_CHANGED, mr),
-		eventOn(tavern_events.CHARACTER_MESSAGE_RENDERED, (e) => fr(e, !0)),
-		eventOn(tavern_events.MESSAGE_EDITED, (e) => fr(e, !0)),
-		eventOn(tavern_events.MESSAGE_UPDATED, (e) => fr(e, !0))
+		eventOn(tavern_events.CHAT_CHANGED, ur),
+		eventOn(tavern_events.CHARACTER_MESSAGE_RENDERED, lr),
+		eventOn(tavern_events.MESSAGE_EDITED, lr),
+		eventOn(tavern_events.MESSAGE_UPDATED, lr)
 	];
 	return () => {
-		$n = !1, e.forEach((e) => e.stop()), Qn.forEach((e) => window.clearTimeout(e)), Qn.clear(), Zn.forEach((e) => ur(e)), Zn.clear();
+		Qn = !1, e.forEach((e) => e.stop()), Zn.forEach((e) => sr(e)), Zn.clear();
 	};
 }
 //#endregion
 //#region src/main.tsx
-var gr = "tavern-cangxuanjie-root", _r = "cangxuanjie-plugin-style", vr = null, yr = null, br = null, xr = null;
+var fr = "tavern-cangxuanjie-root", pr = "cangxuanjie-plugin-style", mr = null, hr = null, gr = null, _r = null;
 $(() => {
-	$(`#${gr}`).remove(), yr = $("<div>").attr("id", gr).appendTo("body")[0], vr = (0, g.createRoot)(yr), toastr.success("苍玄界插件已加载"), $(`#${_r}`).remove(), $("<style>").attr("id", _r).text(_).appendTo("head"), br = er(), xr = hr();
+	$(`#${fr}`).remove(), hr = $("<div>").attr("id", fr).appendTo("body")[0], mr = (0, g.createRoot)(hr), toastr.success("苍玄界插件已加载"), $(`#${pr}`).remove(), $("<style>").attr("id", pr).text(_).appendTo("head"), gr = $n(), _r = dr();
 }), $(window).on("pagehide", () => {
-	vr?.unmount(), yr?.remove(), vr = null, yr = null, $(`#${_r}`).remove(), br?.(), br = null, xr?.(), xr = null;
+	mr?.unmount(), hr?.remove(), mr = null, hr = null, $(`#${pr}`).remove(), gr?.(), gr = null, _r?.(), _r = null;
 });
 //#endregion

@@ -12,8 +12,8 @@
     --border: #bbb5ac;
     --cx-paper-color: #fbeee2;
     --ink-heavy: #1f1b18;
-    --ink-medium:  #332d29;   /* 焦墨：叙述 */
-    --ink-mute:  #5c534d;   /* 淡墨：注释 */
+    --ink-medium:  #332d29;
+    --ink-mute:  #5c534d;
 }
 
 :root {
