@@ -35,7 +35,7 @@
     }
 
     .cx-dialogue-name, .cx-dialogue-name-head {
-        @apply font-dialogue-name! text-shadow-md!;
+        @apply font-dialogue-name! text-shadow-md! text-black;
     }
 
     .cx-dialogue-name {

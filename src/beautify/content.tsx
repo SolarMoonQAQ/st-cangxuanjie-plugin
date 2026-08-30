@@ -113,6 +113,7 @@ export function startContentRender() {
     const listeners = [
         eventOn(tavern_events.CHAT_CHANGED, renderAll),
         eventOn(tavern_events.CHARACTER_MESSAGE_RENDERED, renderMessage),
+        eventOn(tavern_events.MESSAGE_EDITED, renderMessage),
         eventOn(tavern_events.MESSAGE_UPDATED, renderMessage),
     ]
 
