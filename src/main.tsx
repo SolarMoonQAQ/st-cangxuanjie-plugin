@@ -2,6 +2,7 @@ import { createRoot, type Root } from 'react-dom/client'
 import App from './App.tsx'
 import { startBeautify } from '@/beautify/dialogue.tsx'
 import pluginCss from './index.css?inline'
+import { injectBeautifyPrompt } from './beautify/beautify.ts'
 
 const CONTAINER_ID = 'tavern-cangxuanjie-root'
 const STYLE_ID = 'cangxuanjie-plugin-style'
@@ -10,6 +11,7 @@ let root: Root | null = null
 let container: HTMLElement | null = null
 
 let stopBeautify: (() => void) | null = null
+let stopInjectBeautifyPrompt: (() => void) | null = null
 
 $(() => {
     $(`#${CONTAINER_ID}`).remove()
@@ -24,6 +26,7 @@ $(() => {
     $(`#${STYLE_ID}`).remove()
     $('<style>').attr('id', STYLE_ID).text(pluginCss).appendTo('head')
 
+    stopInjectBeautifyPrompt = injectBeautifyPrompt()
     stopBeautify = startBeautify()
 })
 
@@ -35,6 +38,8 @@ $(window).on('pagehide', () => {
     container = null
 
     $(`#${STYLE_ID}`).remove()
+    stopInjectBeautifyPrompt?.()
+    stopInjectBeautifyPrompt = null
     stopBeautify?.()
     stopBeautify = null
 })
