@@ -65,6 +65,15 @@
         @apply text-(length:--cx-dialogue-size) text-ink-medium leading-relaxed;
     }
 
+    .cx-dialogue-prefix,
+    .cx-dialogue-suffix {
+        display: none;
+    }
+
+    .cx-dom-slot > :first-child {
+        margin: 0;
+    }
+
     .cx-dialogue-name {
         @apply font-dialogue-name text-(length:--cx-name-size) tracking-wide text-black;
     }
