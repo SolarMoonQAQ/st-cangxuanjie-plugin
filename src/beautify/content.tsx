@@ -74,72 +74,50 @@ export function extractContent(messageId: number): string | null {
 }
 
 function renderMessage(messageId: number) {
-    const rawMessage = SillyTavern.chat[messageId]?.mes
-
-    if (typeof rawMessage !== 'string') {
-        return
-    }
-
-    const contentMatch = rawMessage.match(CONTENT_BLOCK_PATTERN)
-
-    if (!contentMatch) {
-        return
-    }
-
-    const marker = `__CX_CONTENT_MARKER_${messageId}__`
-
-    // 只在本次显示中把 content 替换为占位符
-    const messageWithMarker = rawMessage.replace(contentMatch[0], `\n${marker}\n`)
-
-    // 使用酒馆原生流程处理剩余内容：
-    // Markdown、宏、酒馆正则都会继续执行
-    const renderedHtml = formatAsDisplayedMessage(messageWithMarker, {
-        message_id: messageId,
-    })
-
     const displayed = retrieveDisplayedMessage(messageId)[0] as HTMLElement | undefined
 
-    if (!displayed) {
-        return
-    }
+    if (!displayed) return
 
     const mesText = displayed.matches('.mes_text')
         ? displayed
         : displayed.querySelector<HTMLElement>('.mes_text')
 
-    if (!mesText) {
-        return
-    }
+    if (!mesText) return
+
+    const content = extractContent(messageId)
+
+    if (!content) return
 
     const oldState = renderStates.get(messageId)
 
-    oldState?.root.unmount()
-
-    const originalHtml = mesText.innerHTML
-
-    // 放入酒馆已经处理过的 HTML
-    mesText.innerHTML = renderedHtml
-
-    // 找到只包含占位符的段落
-    const markerElement = Array.from(
-        mesText.querySelectorAll<HTMLElement>('p, div, span, li, blockquote'),
-    ).find((element) => {
-        return element.textContent?.trim() === marker
-    })
-
-    if (!markerElement) {
+    // 酒馆没有替换 DOM，直接更新 React
+    if (
+        oldState &&
+        oldState.mesText === mesText &&
+        oldState.mount.isConnected &&
+        oldState.mount.parentElement === mesText
+    ) {
+        oldState.root.render(<ContentRenderer content={content} />)
         return
     }
+
+    // 酒馆已经替换过 DOM，清理旧 React root
+    if (oldState) {
+        oldState.root.unmount()
+        renderStates.delete(messageId)
+    }
+
+    const originalHtml = mesText.innerHTML
 
     const mount = document.createElement('div')
     mount.className = 'cx-react-mount'
 
-    // 只替换 content 对应的占位段落
-    markerElement.replaceWith(mount)
+    // React 只接管自己的子节点
+    mesText.replaceChildren(mount)
 
     const root = createRoot(mount)
 
-    root.render(<ContentRenderer content={contentMatch[1].trim()} />)
+    root.render(<ContentRenderer content={content} />)
 
     renderStates.set(messageId, {
         mesText,
