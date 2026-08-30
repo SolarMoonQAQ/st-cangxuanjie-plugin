@@ -27,8 +27,14 @@ const contentPrompt = {
 
 const CONTENT_BLOCK_PATTERN = /<content\b[^>]*>([\s\S]*?)<\/content>/i
 
-const roots = new Map<HTMLElement, Root>()
-const originalHtml = new Map<HTMLElement, string>()
+type RenderState = {
+    mesText: HTMLElement
+    mount: HTMLElement
+    root: Root
+    originalHtml: string
+}
+
+const renderStates = new Map<number, RenderState>()
 
 export function injectBeautifyPrompt() {
     let uninject: (() => void) | null = null
@@ -68,9 +74,7 @@ export function extractContent(messageId: number): string | null {
 }
 
 function renderMessage(messageId: number) {
-    const displayed = retrieveDisplayedMessage(messageId)[0] as
-        | HTMLElement
-        | undefined
+    const displayed = retrieveDisplayedMessage(messageId)[0] as HTMLElement | undefined
 
     if (!displayed) return
 
@@ -82,23 +86,45 @@ function renderMessage(messageId: number) {
 
     const content = extractContent(messageId)
 
-    // 没有 <content> 时，不要清空原消息
     if (!content) return
 
-    const oldRoot = roots.get(mesText)
+    const oldState = renderStates.get(messageId)
 
-    if (oldRoot) {
-        oldRoot.render(<ContentRenderer content={content} />)
+    // 酒馆没有替换 DOM，直接更新 React
+    if (
+        oldState &&
+        oldState.mesText === mesText &&
+        oldState.mount.isConnected &&
+        oldState.mount.parentElement === mesText
+    ) {
+        oldState.root.render(<ContentRenderer content={content} />)
         return
     }
 
-    originalHtml.set(mesText, mesText.innerHTML)
+    // 酒馆已经替换过 DOM，清理旧 React root
+    if (oldState) {
+        oldState.root.unmount()
+        renderStates.delete(messageId)
+    }
 
-    const root = createRoot(mesText)
+    const originalHtml = mesText.innerHTML
+
+    const mount = document.createElement('div')
+    mount.className = 'cx-react-mount'
+
+    // React 只接管自己的子节点
+    mesText.replaceChildren(mount)
+
+    const root = createRoot(mount)
 
     root.render(<ContentRenderer content={content} />)
 
-    roots.set(mesText, root)
+    renderStates.set(messageId, {
+        mesText,
+        mount,
+        root,
+        originalHtml,
+    })
 }
 
 function renderAll() {
@@ -120,17 +146,14 @@ export function startContentRender() {
     return () => {
         listeners.forEach((listener) => listener.stop())
 
-        roots.forEach((root, mesText) => {
+        renderStates.forEach(({ root, mesText, mount, originalHtml }) => {
             root.unmount()
 
-            const html = originalHtml.get(mesText)
-
-            if (html !== undefined) {
-                mesText.innerHTML = html
+            if (mount.parentElement === mesText) {
+                mesText.innerHTML = originalHtml
             }
         })
 
-        roots.clear()
-        originalHtml.clear()
+        renderStates.clear()
     }
 }

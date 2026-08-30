@@ -47,7 +47,7 @@
     }
 
     .cx-dialogue-content {
-        @apply font-light text-ink-heavy;
+        @apply text-ink-heavy;
     }
 }
 
