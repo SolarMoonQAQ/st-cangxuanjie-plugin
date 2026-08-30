@@ -4,6 +4,7 @@ import DialogueCard from './DialogueCard'
 const DIALOGUE_PATTERN = /^【([^】\r\n]+)】\s*[：:]\s*[“"]([\s\S]*?)[”"]\s*$/
 
 const roots = new Map<HTMLElement, Root>()
+const originalHtml = new Map<HTMLElement, string>()
 
 function beautifyElement(element: HTMLElement) {
     const paragraphs = element.querySelectorAll<HTMLElement>('p')
@@ -16,6 +17,7 @@ function beautifyElement(element: HTMLElement) {
         if (!match) continue
 
         const [, speaker, content] = match
+        originalHtml.set(paragraph, paragraph.innerHTML)
         const root = createRoot(paragraph)
 
         root.render(<DialogueCard speaker={speaker.trim()} content={content.trim()} />)
@@ -48,7 +50,18 @@ export function startBeautify() {
 
     return () => {
         listeners.forEach((listener) => listener.stop())
-        roots.forEach((root) => root.unmount())
+        roots.forEach((root, paragraph) => {
+            root.unmount()
+
+            // 复原原html文字
+            const html = originalHtml.get(paragraph)
+            if (html !== undefined) {
+                paragraph.innerHTML = html
+            }
+        })
+
         roots.clear()
+        originalHtml.clear()
+
     }
 }
