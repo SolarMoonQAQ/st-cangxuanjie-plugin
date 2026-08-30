@@ -29,6 +29,7 @@ const CONTENT_BLOCK_PATTERN = /<content\b[^>]*>([\s\S]*?)<\/content>/i
 
 type RenderState = {
     mesText: HTMLElement
+    contentHost: HTMLElement
     mount: HTMLElement
     root: Root
     originalHtml: string
@@ -88,32 +89,40 @@ function renderMessage(messageId: number) {
 
     if (!content) return
 
+    const contentHost = mesText.querySelector<HTMLElement>('content')
+
+    if (!contentHost) {
+        console.warn(`[苍玄界] 找不到 content 节点，第 ${messageId} 楼跳过渲染`)
+        return
+    }
+
     const oldState = renderStates.get(messageId)
 
-    // 酒馆没有替换 DOM，直接更新 React
     if (
         oldState &&
         oldState.mesText === mesText &&
         oldState.mount.isConnected &&
-        oldState.mount.parentElement === mesText
+        oldState.mount.parentElement === contentHost
     ) {
         oldState.root.render(<ContentRenderer content={content} />)
         return
     }
 
-    // 酒馆已经替换过 DOM，清理旧 React root
     if (oldState) {
         oldState.root.unmount()
         renderStates.delete(messageId)
     }
 
-    const originalHtml = mesText.innerHTML
+    const originalHtml = contentHost.innerHTML
 
     const mount = document.createElement('div')
     mount.className = 'cx-react-mount'
 
-    // React 只接管自己的子节点
-    mesText.replaceChildren(mount)
+    /*
+     * 只替换 <content> 内部
+     * 不动 content 外面的 planning、options、progress 等内容
+     */
+    contentHost.replaceChildren(mount)
 
     const root = createRoot(mount)
 
@@ -121,6 +130,7 @@ function renderMessage(messageId: number) {
 
     renderStates.set(messageId, {
         mesText,
+        contentHost,
         mount,
         root,
         originalHtml,
@@ -146,11 +156,11 @@ export function startContentRender() {
     return () => {
         listeners.forEach((listener) => listener.stop())
 
-        renderStates.forEach(({ root, mesText, mount, originalHtml }) => {
+        renderStates.forEach(({ root, contentHost, mount, originalHtml }) => {
             root.unmount()
 
-            if (mount.parentElement === mesText) {
-                mesText.innerHTML = originalHtml
+            if (contentHost.isConnected && mount.parentElement === contentHost) {
+                contentHost.innerHTML = originalHtml
             }
         })
 

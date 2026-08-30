@@ -10535,20 +10535,26 @@ function er(e) {
 	if (!n) return;
 	let r = $n(e);
 	if (!r) return;
-	let i = Zn.get(e);
-	if (i && i.mesText === n && i.mount.isConnected && i.mount.parentElement === n) {
-		i.root.render(/* @__PURE__ */ (0, b.jsx)(Jn, { content: r }));
+	let i = n.querySelector("content");
+	if (!i) {
+		console.warn(`[苍玄界] 找不到 content 节点，第 ${e} 楼跳过渲染`);
 		return;
 	}
-	i && (i.root.unmount(), Zn.delete(e));
-	let a = n.innerHTML, o = document.createElement("div");
-	o.className = "cx-react-mount", n.replaceChildren(o);
-	let s = (0, y.createRoot)(o);
-	s.render(/* @__PURE__ */ (0, b.jsx)(Jn, { content: r })), Zn.set(e, {
+	let a = Zn.get(e);
+	if (a && a.mesText === n && a.mount.isConnected && a.mount.parentElement === i) {
+		a.root.render(/* @__PURE__ */ (0, b.jsx)(Jn, { content: r }));
+		return;
+	}
+	a && (a.root.unmount(), Zn.delete(e));
+	let o = i.innerHTML, s = document.createElement("div");
+	s.className = "cx-react-mount", i.replaceChildren(s);
+	let c = (0, y.createRoot)(s);
+	c.render(/* @__PURE__ */ (0, b.jsx)(Jn, { content: r })), Zn.set(e, {
 		mesText: n,
-		mount: o,
-		root: s,
-		originalHtml: a
+		contentHost: i,
+		mount: s,
+		root: c,
+		originalHtml: o
 	});
 }
 function tr() {
@@ -10563,8 +10569,8 @@ function nr() {
 		eventOn(tavern_events.MESSAGE_UPDATED, er)
 	];
 	return () => {
-		e.forEach((e) => e.stop()), Zn.forEach(({ root: e, mesText: t, mount: n, originalHtml: r }) => {
-			e.unmount(), n.parentElement === t && (t.innerHTML = r);
+		e.forEach((e) => e.stop()), Zn.forEach(({ root: e, contentHost: t, mount: n, originalHtml: r }) => {
+			e.unmount(), t.isConnected && n.parentElement === t && (t.innerHTML = r);
 		}), Zn.clear();
 	};
 }
