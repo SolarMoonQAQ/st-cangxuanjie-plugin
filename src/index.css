@@ -11,7 +11,7 @@
     --dialogue-name-font: 'Zhi Mang Xing';
     --border: #bbb5ac;
     --cx-paper-color: #fbeee2;
-    --ink-heavy: #1f1b18;   /* 浓墨：人名、台词重点 */
+    --ink-heavy: #1f1b18;
     --ink-medium:  #332d29;   /* 焦墨：叙述 */
     --ink-mute:  #5c534d;   /* 淡墨：注释 */
 }
@@ -65,7 +65,12 @@
         @apply text-(length:--cx-dialogue-size) text-ink-medium leading-relaxed;
     }
 
-    .cx-dialogue-raw > :first-child {
+    .cx-dialogue-prefix,
+    .cx-dialogue-suffix {
+        display: none;
+    }
+
+    .cx-dom-slot > :first-child {
         margin: 0;
     }
 

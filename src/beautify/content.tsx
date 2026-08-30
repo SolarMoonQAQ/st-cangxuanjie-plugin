@@ -34,11 +34,12 @@ type RenderState = {
     contentHost: HTMLElement
     mount: HTMLElement
     root: Root
-    originalHtml: string
+    blocks: ContentBlock[]
     observer: MutationObserver
 }
 
 const renderStates = new Map<number, RenderState>()
+const renderTimers = new Map<number, number>()
 let contentRenderActive = false
 
 export function injectBeautifyPrompt() {
@@ -87,77 +88,15 @@ function getMeaningfulNodes(root: HTMLElement): Node[] {
     })
 }
 
-function isBlockElement(element: Element): boolean {
-    return [
-        'ADDRESS',
-        'ARTICLE',
-        'ASIDE',
-        'BLOCKQUOTE',
-        'DIV',
-        'DL',
-        'FIELDSET',
-        'FIGURE',
-        'FOOTER',
-        'FORM',
-        'H1',
-        'H2',
-        'H3',
-        'H4',
-        'H5',
-        'H6',
-        'HEADER',
-        'HR',
-        'LI',
-        'MAIN',
-        'NAV',
-        'OL',
-        'P',
-        'PRE',
-        'SECTION',
-        'TABLE',
-        'UL',
-    ].includes(element.tagName)
-}
-
 function getRenderedNodes(contentHost: HTMLElement): Node[] {
-    const source = document.createElement('div')
-    source.innerHTML = contentHost.innerHTML
-
-    const directNodes = getMeaningfulNodes(source)
-
-    if (directNodes.length !== 1) {
-        return directNodes
-    }
-
-    const onlyNode = directNodes[0]
-
-    if (onlyNode.nodeType === Node.TEXT_NODE) {
-        const text = onlyNode.textContent ?? ''
-
-        if (!/\n{2,}/.test(text)) {
-            return directNodes
-        }
-
-        return text
-            .split(/\n{2,}/)
-            .map((part) => part.trim())
-            .filter(Boolean)
-            .map((part) => {
-                const paragraph = document.createElement('p')
-                paragraph.textContent = part
-                return paragraph
-            })
-    }
-
-    if (onlyNode instanceof HTMLElement) {
-        const blockChildren = Array.from(onlyNode.children).filter(isBlockElement)
-
-        if (blockChildren.length > 1) {
-            return blockChildren
-        }
-    }
-
-    return directNodes
+    // 必须读取酒馆完成 Markdown/正则处理后的真实节点，不能复制 innerHTML。
+    // 否则 DomSlot 移走的是副本，原节点仍会留在正文里，最终产生重复内容。
+    return getMeaningfulNodes(contentHost).filter((node) => {
+        return !(
+            node instanceof HTMLElement &&
+            node.classList.contains('cx-react-mount')
+        )
+    })
 }
 
 function getTextNodes(root: Node): Text[] {
@@ -171,45 +110,75 @@ function getTextNodes(root: Node): Text[] {
     return nodes
 }
 
-function removeTextFromStart(root: Node, length: number) {
+function wrapTextFromStart(root: Node, length: number, className: string) {
     let remaining = length
 
     for (const textNode of getTextNodes(root)) {
         if (remaining <= 0) break
 
         const count = Math.min(remaining, textNode.data.length)
-        textNode.deleteData(0, count)
+        const range = document.createRange()
+
+        range.setStart(textNode, 0)
+        range.setEnd(textNode, count)
+
+        const wrapper = document.createElement('span')
+        wrapper.className = className
+        range.surroundContents(wrapper)
+
         remaining -= count
     }
 }
 
-function removeTextFromEnd(root: Node, length: number) {
+function wrapTextFromEnd(root: Node, length: number, className: string) {
     let remaining = length
 
     for (const textNode of getTextNodes(root).reverse()) {
         if (remaining <= 0) break
 
         const count = Math.min(remaining, textNode.data.length)
-        textNode.deleteData(textNode.data.length - count, count)
+        const range = document.createRange()
+
+        range.setStart(textNode, textNode.data.length - count)
+        range.setEnd(textNode, textNode.data.length)
+
+        const wrapper = document.createElement('span')
+        wrapper.className = className
+        range.surroundContents(wrapper)
+
         remaining -= count
     }
 }
 
-function escapeHtml(text: string): string {
-    return text
-        .replaceAll('&', '&amp;')
-        .replaceAll('<', '&lt;')
-        .replaceAll('>', '&gt;')
-        .replaceAll('"', '&quot;')
-        .replaceAll("'", '&#039;')
-}
+function hideDialogueMarkers(node: Node, fullText: string): Node {
+    let element: HTMLElement
 
-function toHtml(node: Node): string {
     if (node instanceof HTMLElement) {
-        return node.outerHTML
+        element = node
+    } else {
+        // 酒馆通常会把正文转成 <p>，这里兼容仍然是直接文本节点的情况。
+        element = document.createElement('span')
+        node.parentNode?.replaceChild(element, node)
+        element.appendChild(node)
     }
 
-    return escapeHtml(node.textContent ?? '')
+    const leadingLength = fullText.match(/^\s*/)?.[0].length ?? 0
+    const opening = fullText.trim().match(DIALOGUE_OPEN_PATTERN)?.[0]
+    const closing = fullText.match(DIALOGUE_CLOSE_PATTERN)?.[0]
+
+    if (opening) {
+        wrapTextFromStart(
+            element,
+            leadingLength + opening.length,
+            'cx-dialogue-prefix',
+        )
+    }
+
+    if (closing) {
+        wrapTextFromEnd(element, closing.length, 'cx-dialogue-suffix')
+    }
+
+    return element
 }
 
 function getContentBlocks(contentHost: HTMLElement): ContentBlock[] {
@@ -218,67 +187,78 @@ function getContentBlocks(contentHost: HTMLElement): ContentBlock[] {
         const match = text.trim().match(DIALOGUE_PATTERN)
 
         if (!match) {
-            return { html: toHtml(node) }
+            return { node }
         }
 
-        const clone = node.cloneNode(true)
-        const leadingLength = text.match(/^\s*/)?.[0].length ?? 0
-        const opening = text.trim().match(DIALOGUE_OPEN_PATTERN)?.[0]
-        const closing = text.match(DIALOGUE_CLOSE_PATTERN)?.[0]
-
-        if (opening) {
-            removeTextFromStart(clone, leadingLength + opening.length)
-        }
-
-        if (closing) {
-            removeTextFromEnd(clone, closing.length)
-        }
+        const preparedNode = hideDialogueMarkers(node, text)
 
         return {
-            html: clone instanceof HTMLElement
-                ? clone.innerHTML
-                : escapeHtml(clone.textContent ?? ''),
+            node: preparedNode,
             speaker: match[1].trim(),
         }
     })
 }
 
 function cleanupState(state: RenderState) {
-    const shouldRestore = state.mount.isConnected && state.contentHost.isConnected
-
     state.observer.disconnect()
     state.root.unmount()
 
-    if (shouldRestore && state.mount.parentElement === state.contentHost) {
-        state.contentHost.innerHTML = state.originalHtml
+    if (state.contentHost.isConnected) {
+        // DomSlot 卸载时会把节点放回去；这里按原始顺序再整理一次。
+        state.blocks.forEach((block) => {
+            state.contentHost.appendChild(block.node)
+        })
     }
 
     state.mount.remove()
 }
 
-function scheduleRemount(messageId: number) {
-    queueMicrotask(() => {
-        if (!contentRenderActive) return
+function disposeState(messageId: number) {
+    const state = renderStates.get(messageId)
 
-        const state = renderStates.get(messageId)
+    if (!state) return
 
-        if (state && state.mount.isConnected && state.contentHost.isConnected) {
-            return
-        }
+    renderStates.delete(messageId)
+    cleanupState(state)
+}
 
-        renderMessage(messageId)
-    })
+function scheduleRenderMessage(messageId: number, invalidate = false) {
+    if (invalidate) {
+        disposeState(messageId)
+    }
+
+    const previousTimer = renderTimers.get(messageId)
+
+    if (previousTimer !== undefined) {
+        window.clearTimeout(previousTimer)
+    }
+
+    const timer = window.setTimeout(() => {
+        renderTimers.delete(messageId)
+
+        // 让酒馆和其他显示正则插件先完成本轮 DOM 更新。
+        window.requestAnimationFrame(() => {
+            if (contentRenderActive) {
+                renderMessage(messageId)
+            }
+        })
+    }, 0)
+
+    renderTimers.set(messageId, timer)
 }
 
 function renderMessage(messageId: number) {
     const mesText = getMessageText(messageId)
 
-    if (!mesText) return
+    if (!mesText) {
+        disposeState(messageId)
+        return
+    }
 
     const contentHost = getContentHost(mesText)
 
     if (!contentHost) {
-        console.warn(`[苍玄界] 找不到 content 节点，第 ${messageId} 楼跳过渲染`)
+        disposeState(messageId)
         return
     }
 
@@ -299,21 +279,20 @@ function renderMessage(messageId: number) {
         cleanupState(oldState)
     }
 
-    const originalHtml = contentHost.innerHTML
     const blocks = getContentBlocks(contentHost)
 
     if (blocks.length === 0) return
 
     const mount = document.createElement('div')
     mount.className = 'cx-react-mount'
-    contentHost.replaceChildren(mount)
+    contentHost.append(mount)
 
     const root = createRoot(mount)
     const observer = new MutationObserver(() => {
         const state = renderStates.get(messageId)
 
         if (!state || !state.mount.isConnected || !state.contentHost.isConnected) {
-            scheduleRemount(messageId)
+            scheduleRenderMessage(messageId)
         }
     })
 
@@ -322,19 +301,21 @@ function renderMessage(messageId: number) {
         contentHost,
         mount,
         root,
-        originalHtml,
+        blocks,
         observer,
     }
 
     renderStates.set(messageId, state)
     observer.observe(mesText, { childList: true, subtree: true })
 
-    root.render(<ContentRenderer blocks={blocks} />)
+    root.render(
+        <ContentRenderer blocks={blocks} contentHost={contentHost} />,
+    )
 }
 
 function renderAll() {
     for (let messageId = 0; messageId < SillyTavern.chat.length; messageId++) {
-        renderMessage(messageId)
+        scheduleRenderMessage(messageId)
     }
 }
 
@@ -344,15 +325,27 @@ export function startContentRender() {
 
     const listeners = [
         eventOn(tavern_events.CHAT_CHANGED, renderAll),
-        eventOn(tavern_events.CHARACTER_MESSAGE_RENDERED, renderMessage),
-        eventOn(tavern_events.MESSAGE_EDITED, renderMessage),
-        eventOn(tavern_events.MESSAGE_UPDATED, renderMessage),
+        eventOn(
+            tavern_events.CHARACTER_MESSAGE_RENDERED,
+            (messageId) => scheduleRenderMessage(messageId, true),
+        ),
+        eventOn(
+            tavern_events.MESSAGE_EDITED,
+            (messageId) => scheduleRenderMessage(messageId, true),
+        ),
+        eventOn(
+            tavern_events.MESSAGE_UPDATED,
+            (messageId) => scheduleRenderMessage(messageId, true),
+        ),
     ]
 
     return () => {
         contentRenderActive = false
 
         listeners.forEach((listener) => listener.stop())
+
+        renderTimers.forEach((timer) => window.clearTimeout(timer))
+        renderTimers.clear()
 
         renderStates.forEach((state) => cleanupState(state))
         renderStates.clear()
