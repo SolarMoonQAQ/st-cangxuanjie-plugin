@@ -21,10 +21,10 @@ $(() => {
 
     toastr.success('苍玄界插件已加载')
 
+    // Remove styles left by an older plugin instance before mounting the isolated UI.
     $(`#${STYLE_ID}`).remove()
-    $('<style>').attr('id', STYLE_ID).text(pluginCss).appendTo('head')
 
-    stopBeautify = startBeautify()
+    stopBeautify = startBeautify(pluginCss)
 })
 
 $(window).on('pagehide', () => {

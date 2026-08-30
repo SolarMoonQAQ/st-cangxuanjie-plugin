@@ -11,29 +11,44 @@
     --border: #e2e8f0;
 }
 
+:host {
+    --dialogue-name-font: 'Zhi Mang Xing';
+    --border: #e2e8f0;
+    display: block;
+}
+
 @theme {
     --font-dialogue-name: var(--dialogue-name-font);
     --color-border: var(--border);
 }
 
-.cx-avatar,
-.cx-avatar *,
-.cx-avatar::after {
-    border-radius: var(--radius-lg, 0.5rem) !important;
+@layer components {
+    .cx-avatar,
+    .cx-avatar *,
+    .cx-avatar::after {
+        border-radius: var(--radius-lg, 0.5rem) !important;
+    }
+
+    .cx-dialogue-name, .cx-dialogue-name-head {
+        @apply text-shadow-md;
+    }
+
+    .cx-dialogue-name {
+        @apply text-2xl;
+    }
+
+    .cx-dialogue-name-head {
+        @apply text-3xl;
+    }
+
+    .cx-dialogue-content {
+        @apply text-sm;
+    }
 }
 
-.cx-dialogue-name, .cx-dialogue-name-head {
-    @apply text-shadow-md;
-}
-
-.cx-dialogue-name {
-    @apply text-2xl;
-}
-
+/* This stylesheet is injected into SillyTavern, whose unlayered rules can
+   otherwise override Tailwind's layered component declarations. */
+.cx-dialogue-name,
 .cx-dialogue-name-head {
-    @apply text-3xl;
-}
-
-.cx-dialogue-content {
-    @apply text-sm;
+    font-family: var(--dialogue-name-font), cursive !important;
 }

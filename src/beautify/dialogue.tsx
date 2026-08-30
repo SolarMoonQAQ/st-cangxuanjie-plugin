@@ -3,10 +3,32 @@ import DialogueCard from './DialogueCard'
 
 const DIALOGUE_PATTERN = /^【([^】\r\n]+)】\s*[：:]\s*[“"]([\s\S]*?)[”"]\s*$/
 
-const roots = new Map<HTMLElement, Root>()
-const originalHtml = new Map<HTMLElement, string>()
+type DialogueMount = {
+    root: Root
+    host: HTMLElement
+    originalHtml: string
+}
 
-function beautifyElement(element: HTMLElement) {
+const roots = new Map<HTMLElement, DialogueMount>()
+
+let sharedStyleSheet: CSSStyleSheet | null = null
+
+function adoptPluginStyles(shadowRoot: ShadowRoot, cssText: string) {
+    if ('adoptedStyleSheets' in shadowRoot && 'replaceSync' in CSSStyleSheet.prototype) {
+        sharedStyleSheet ??= new CSSStyleSheet()
+        if (sharedStyleSheet.cssRules.length === 0) {
+            sharedStyleSheet.replaceSync(cssText)
+        }
+        shadowRoot.adoptedStyleSheets = [sharedStyleSheet]
+        return
+    }
+
+    const style = document.createElement('style')
+    style.textContent = cssText
+    shadowRoot.append(style)
+}
+
+function beautifyElement(element: HTMLElement, cssText: string) {
     const paragraphs = element.querySelectorAll<HTMLElement>('p')
 
     for (const paragraph of paragraphs) {
@@ -17,51 +39,56 @@ function beautifyElement(element: HTMLElement) {
         if (!match) continue
 
         const [, speaker, content] = match
-        originalHtml.set(paragraph, paragraph.innerHTML)
-        const root = createRoot(paragraph)
+        const host = document.createElement('span')
+        host.className = 'cx-dialogue-shadow-host'
+
+        const shadowRoot = host.attachShadow({ mode: 'open' })
+        adoptPluginStyles(shadowRoot, cssText)
+
+        const mountPoint = document.createElement('div')
+        shadowRoot.append(mountPoint)
+
+        const originalHtml = paragraph.innerHTML
+        paragraph.replaceChildren(host)
+
+        const root = createRoot(mountPoint)
 
         root.render(<DialogueCard speaker={speaker.trim()} content={content.trim()} />)
 
-        roots.set(paragraph, root)
+        roots.set(paragraph, { root, host, originalHtml })
     }
 }
 
-function beautifyMessage(messageId: number) {
+function beautifyMessage(messageId: number, cssText: string) {
     const element = retrieveDisplayedMessage(messageId)[0]
-    if (element) beautifyElement(element)
+    if (element) beautifyElement(element, cssText)
 }
 
-function beautifyAll() {
+function beautifyAll(cssText: string) {
     $('.mes_text').each((_index, element) => {
-        beautifyElement(element as HTMLElement)
+        beautifyElement(element as HTMLElement, cssText)
     })
 }
 
-export function startBeautify() {
+export function startBeautify(cssText: string) {
     $('.mes_text').each((_index, element) => {
-        beautifyElement(element as HTMLElement)
+        beautifyElement(element as HTMLElement, cssText)
     })
 
     const listeners = [
-        eventOn(tavern_events.CHAT_CHANGED, beautifyAll),
-        eventOn(tavern_events.CHARACTER_MESSAGE_RENDERED, beautifyMessage),
-        eventOn(tavern_events.MESSAGE_UPDATED, beautifyMessage),
+        eventOn(tavern_events.CHAT_CHANGED, () => beautifyAll(cssText)),
+        eventOn(tavern_events.CHARACTER_MESSAGE_RENDERED, (messageId) => beautifyMessage(messageId, cssText)),
+        eventOn(tavern_events.MESSAGE_UPDATED, (messageId) => beautifyMessage(messageId, cssText)),
     ]
 
     return () => {
         listeners.forEach((listener) => listener.stop())
-        roots.forEach((root, paragraph) => {
+        roots.forEach(({ root, host, originalHtml }, paragraph) => {
             root.unmount()
-
-            // 复原原html文字
-            const html = originalHtml.get(paragraph)
-            if (html !== undefined) {
-                paragraph.innerHTML = html
-            }
+            host.remove()
+            paragraph.innerHTML = originalHtml
         })
 
         roots.clear()
-        originalHtml.clear()
-
     }
 }
