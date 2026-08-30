@@ -65,11 +65,21 @@
     }
 
     .cx-dialogue-name {
-        @apply font-dialogue-name! text-(length:--cx-name-size)! tracking-wide;
+        @apply font-dialogue-name text-(length:--cx-name-size) tracking-wide text-black;
     }
 
     .cx-dialogue-name-head {
-        @apply font-dialogue-name! text-(length:--cx-name-head-size)!;
+        @apply font-dialogue-name text-(length:--cx-name-head-size);
+    }
+
+    .cx-dialogue {
+        @apply py-2;
+    }
+
+    .cx-avatar,
+    .cx-avatar *,
+    .cx-avatar::after {
+        border-radius: var(--radius-lg, 0.5rem) !important;
     }
 }
 
