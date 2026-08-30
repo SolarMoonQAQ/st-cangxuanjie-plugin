@@ -7,13 +7,24 @@ type DialogueProps = {
     content: string
 }
 
+export function YinSeal({ text = '印' }: { text?: string }) {
+    return (
+        <span
+            className="inline-flex items-center justify-center select-none font-serif text-xs font-bold leading-none text-red-50 bg-[#9e2a2b] border border-[#7f1d1d] shadow-[0_0_0_1px_rgba(158,42,43,0.3)] rounded-[2px] px-1 py-0.5 mr-1.5 align-baseline -rotate-2 tracking-tight"
+            style={{ fontFamily: '"STKaiti", "KaiTi", "SimSun", serif' }}
+        >
+            {text}
+        </span>
+    )
+}
+
 export default function DialogueCard({ speaker, content }: DialogueProps) {
     const nameHead = speaker.charAt(0)
     const nameTail = speaker.slice(1)
     const profile = getSpeakerProfile(speaker)
 
     return (
-        <div className="flex">
+        <div className="flex cx-dialogue">
             <Avatar className="h-10 w-10 shrink-0 cx-avatar">
                 <AvatarImage src={profile.avatar} alt={`${speaker}头像`} />
                 <AvatarFallback>👤</AvatarFallback>
@@ -32,7 +43,12 @@ export default function DialogueCard({ speaker, content }: DialogueProps) {
                     <span className="cx-dialogue-name">{nameTail}</span>
                 </div>
 
-                <p className="cx-dialogue-content">{content}</p>
+                <p className="cx-dialogue-content">
+                    <span>
+                        <YinSeal text={nameHead}></YinSeal>
+                    </span>
+                    {content}
+                </p>
             </div>
         </div>
     )

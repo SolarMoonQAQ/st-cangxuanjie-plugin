@@ -72,7 +72,7 @@ export const speakerProfiles: Record<string, SpeakerProfile> = {
 }
 
 const defaultProfile: SpeakerProfile = {
-    avatar: 'https://github.com/shadcn.png',
+    avatar: 'null',
 }
 
 export function getSpeakerProfile(speaker: string): SpeakerProfile {

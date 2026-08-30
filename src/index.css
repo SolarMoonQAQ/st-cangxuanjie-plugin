@@ -8,15 +8,26 @@
 
 :root {
     --dialogue-name-font: 'Zhi Mang Xing';
-    --border: #e2e8f0;
+    --border: #bbb5ac;
+    --cx-paper-color: #fbeee2;
+    --ink-heavy: #1f1b18;   /* 浓墨：人名、台词重点 */
+    --ink-body:  #332d29;   /* 焦墨：叙述 */
+    --ink-mute:  #5c534d;   /* 淡墨：注释 */
 }
 
 @theme {
     --font-dialogue-name: var(--dialogue-name-font);
     --color-border: var(--border);
+    --color-ink-heavy: var(--ink-heavy);
+    --color-ink-body: var(--ink-body);
+    --color-ink-mute: var(--ink-mute);
 }
 
 @layer components {
+    .cx-dialogue {
+        @apply py-2;
+    }
+
     .cx-avatar,
     .cx-avatar *,
     .cx-avatar::after {
@@ -36,44 +47,17 @@
     }
 
     .cx-dialogue-content {
-        @apply text-sm!;
+        @apply font-light text-ink-heavy;
     }
 }
 
-#chat .mes .mes_text content {
-    display: flow-root;
+@layer components {
+    .cx-bg {
+        @apply bg-(--cx-paper-color) p-6 drop-shadow-md;
+        background-image: url("assets/textures/handmade-paper.png");
+    }
 
-    background:
-            radial-gradient(
-                    ellipse at 20% 25%,
-                    rgb(255 255 255 / 35%),
-                    transparent 35%
-            ),
-            radial-gradient(
-                    ellipse at 80% 75%,
-                    rgb(121 78 24 / 18%),
-                    transparent 40%
-            ),
-            repeating-linear-gradient(
-                    0deg,
-                    rgb(120 80 25 / 4%) 0,
-                    rgb(120 80 25 / 4%) 1px,
-                    transparent 1px,
-                    transparent 4px
-            ),
-            linear-gradient(135deg, #f5e6bd, #e8c98f, #f1dcae) !important;
-
-    background-blend-mode: screen, multiply, multiply, normal !important;
-
-    padding: 20px !important;
-    border: 1px solid #b7955a !important;
-    border-radius: 12px !important;
-    box-shadow: inset 0 0 24px rgb(109 72 23 / 22%) !important;
-
-    color: #2f2418 !important;
-}
-
-#chat .mes .mes_text content,
-#chat .mes .mes_text content * {
-    color: #2f2418 !important;
+    .cx-narration {
+        @apply py-2 text-ink-body;
+    }
 }
