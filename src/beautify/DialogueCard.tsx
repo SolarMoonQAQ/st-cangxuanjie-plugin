@@ -17,12 +17,12 @@ export default function DialogueCard({ speaker, content }: DialogueProps) {
                 <AvatarFallback>👤</AvatarFallback>
             </Avatar>
 
-            <div className="flex flex-col items-center shrink-0 ml-2">
+            <div className="flex flex-col items-center shrink-0 ml-2!">
                 <div className="flex items-center h-10">
                     <span className="cx-dialogue-name-head">{nameHead}</span>
                 </div>
 
-                <Separator orientation="vertical" className="w-px flex-1 bg-border" />
+                <Separator orientation="vertical" className="w-px! flex-1 bg-border!" />
             </div>
 
             <div className="flex flex-col flex-1">
