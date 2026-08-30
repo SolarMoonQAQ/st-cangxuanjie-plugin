@@ -10492,7 +10492,7 @@ var Kn = {
 	role: "system",
 	should_scan: !1,
 	content: "\n输出时必须遵守以下格式：\n\n1. 所有面向用户展示的正文内容，包括旁白、动作、环境描写、角色对话，都必须放在唯一的一对 <content> 和 </content> 标签内。\n2. 除了 <content>...</content> 外，不要输出任何正文内容。\n3. 不要遗漏标签，不要嵌套 content 标签。\n4. 不要把标签放进 Markdown 代码块中。\n\n格式示例：\n\n<content>\n这里是完整的正文内容。\n</content>\n"
-}, qn = /<content\b[^>]*>([\s\S]*?)<\/content>/i, Jn = /* @__PURE__ */ new Map();
+}, qn = /<div\b[^>]*data-cx-content[^>]*>([\s\S]*?)<\/div>/i, Jn = /* @__PURE__ */ new Map();
 function Yn() {
 	let e = null, t = () => {
 		e?.(), e = injectPrompts([Kn]).uninject;
@@ -10516,27 +10516,25 @@ function Zn(e) {
 	if (!n) return;
 	let r = Xn(e);
 	if (!r) return;
-	let i = Jn.get(e);
-	if (i && i.mesText === n && i.mount.isConnected && n.contains(i.mount)) {
-		i.root.render(/* @__PURE__ */ (0, M.jsx)(Gn, { content: r }));
-		return;
-	}
-	i && (i.root.unmount(), Jn.delete(e));
-	let a = /<content\b[^>]*>[\s\S]*?<\/content>/i;
-	if (!a.test(n.innerHTML) && !n.querySelector("content")) {
+	let i = n.querySelector("[data-cx-content]");
+	if (!i) {
 		console.warn(`[苍玄界] 找不到 content 节点，第 ${e} 楼跳过渲染`);
 		return;
 	}
-	let o = n.innerHTML, s = `cx-mount-${e}-${Date.now()}`;
-	n.innerHTML = o.replace(a, `<div id="${s}" class="cx-react-mount"></div>`);
-	let c = n.querySelector(`#${s}`);
-	if (!c) return;
-	let l = (0, g.createRoot)(c);
-	l.render(/* @__PURE__ */ (0, M.jsx)(Gn, { content: r })), Jn.set(e, {
+	let a = Jn.get(e);
+	if (a && a.mesText === n && a.mount.isConnected && a.mount.parentElement === i) {
+		a.root.render(/* @__PURE__ */ (0, M.jsx)(Gn, { content: r }));
+		return;
+	}
+	a && (a.root.unmount(), Jn.delete(e));
+	let o = i.innerHTML, s = document.createElement("div");
+	s.className = "cx-react-mount", i.replaceChildren(s);
+	let c = (0, g.createRoot)(s);
+	c.render(/* @__PURE__ */ (0, M.jsx)(Gn, { content: r })), Jn.set(e, {
 		mesText: n,
-		contentHost: c,
-		mount: c,
-		root: l,
+		contentHost: i,
+		mount: s,
+		root: c,
 		originalHtml: o
 	});
 }
