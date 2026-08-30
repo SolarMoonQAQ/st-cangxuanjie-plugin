@@ -39,3 +39,39 @@
         @apply text-sm!;
     }
 }
+
+#chat .mes .mes_text {
+    background:
+            radial-gradient(
+                    ellipse at 20% 25%,
+                    rgb(255 255 255 / 35%),
+                    transparent 35%
+            ),
+            radial-gradient(
+                    ellipse at 80% 75%,
+                    rgb(121 78 24 / 18%),
+                    transparent 40%
+            ),
+            repeating-linear-gradient(
+                    0deg,
+                    rgb(120 80 25 / 4%) 0,
+                    rgb(120 80 25 / 4%) 1px,
+                    transparent 1px,
+                    transparent 4px
+            ),
+            linear-gradient(
+                    135deg,
+                    #f5e6bd 0%,
+                    #e8c98f 50%,
+                    #f1dcae 100%
+            ) !important;
+
+    background-blend-mode: screen, multiply, multiply, normal !important;
+
+    padding: 20px !important;
+    border: 1px solid #b7955a !important;
+    border-radius: 12px !important;
+    box-shadow:
+            inset 0 0 24px rgb(109 72 23 / 22%),
+            0 3px 10px rgb(72 45 12 / 15%) !important;
+}
