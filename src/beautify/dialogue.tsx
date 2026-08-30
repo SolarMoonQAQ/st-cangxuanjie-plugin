@@ -11,33 +11,7 @@ type DialogueMount = {
 
 const roots = new Map<HTMLElement, DialogueMount>()
 
-let sharedStyleSheet: CSSStyleSheet | null = null
-let sharedStyleText = ''
-
 function adoptPluginStyles(shadowRoot: ShadowRoot, cssText: string) {
-    try {
-        if ('adoptedStyleSheets' in shadowRoot && 'replaceSync' in CSSStyleSheet.prototype) {
-            if (!sharedStyleSheet || sharedStyleText !== cssText) {
-                const stylesheet = new CSSStyleSheet()
-                stylesheet.replaceSync(cssText)
-
-                if (stylesheet.cssRules.length === 0) {
-                    throw new Error('Plugin stylesheet produced no CSS rules')
-                }
-
-                sharedStyleSheet = stylesheet
-                sharedStyleText = cssText
-            }
-
-            shadowRoot.adoptedStyleSheets = [sharedStyleSheet]
-            if (shadowRoot.adoptedStyleSheets.includes(sharedStyleSheet)) {
-                return
-            }
-        }
-    } catch {
-        // Fall back to a regular style element for partial adoptedStyleSheets implementations.
-    }
-
     const style = document.createElement('style')
     style.textContent = cssText
     shadowRoot.append(style)
