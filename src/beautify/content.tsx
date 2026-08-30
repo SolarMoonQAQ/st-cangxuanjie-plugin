@@ -1,5 +1,5 @@
 import { createRoot, type Root } from 'react-dom/client'
-import ContentRenderer, { type ContentBlock } from './ContentRenderer'
+import ContentRenderer from './ContentRenderer'
 
 const CONTENT_PROMPT_ID = 'cangxuanjie-content-format'
 
@@ -25,21 +25,17 @@ const contentPrompt = {
 `,
 }
 
-const DIALOGUE_PATTERN = /^【([^】\r\n]+)】\s*[：:]\s*[“"]([\s\S]*?)[”"]$/
-const DIALOGUE_OPEN_PATTERN = /^【[^】\r\n]+】\s*[：:]\s*[“"]/
-const DIALOGUE_CLOSE_PATTERN = /[”"]\s*$/
+const CONTENT_BLOCK_PATTERN = /<div\b[^>]*data-cx-content[^>]*>([\s\S]*?)<\/div>/i
 
 type RenderState = {
     mesText: HTMLElement
     contentHost: HTMLElement
     mount: HTMLElement
     root: Root
-    blocks: ContentBlock[]
-    observer: MutationObserver
+    originalHtml: string
 }
 
 const renderStates = new Map<number, RenderState>()
-let contentRenderActive = false
 
 export function injectBeautifyPrompt() {
     let uninject: (() => void) | null = null
@@ -62,217 +58,82 @@ export function injectBeautifyPrompt() {
     }
 }
 
-function getMessageText(messageId: number): HTMLElement | null {
-    const displayed = retrieveDisplayedMessage(messageId)[0] as HTMLElement | undefined
+export function extractContent(messageId: number): string | null {
+    const message = SillyTavern.chat[messageId]?.mes
 
-    if (!displayed) return null
-
-    return displayed.matches('.mes_text')
-        ? displayed
-        : displayed.querySelector<HTMLElement>('.mes_text')
-}
-
-function getContentHost(mesText: HTMLElement): HTMLElement | null {
-    // 新格式使用 div，兼容之前已经生成的 <content> 消息。
-    return mesText.querySelector<HTMLElement>('[data-cx-content], content')
-}
-
-function getTextNodes(root: Node): Text[] {
-    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT)
-    const nodes: Text[] = []
-
-    while (walker.nextNode()) {
-        nodes.push(walker.currentNode as Text)
+    if (typeof message !== 'string') {
+        return null
     }
 
-    return nodes
-}
+    const match = message.match(CONTENT_BLOCK_PATTERN)
 
-function wrapTextFromStart(root: Node, length: number, className: string) {
-    let remaining = length
-
-    for (const textNode of getTextNodes(root)) {
-        if (remaining <= 0) break
-
-        const count = Math.min(remaining, textNode.data.length)
-        const range = document.createRange()
-
-        range.setStart(textNode, 0)
-        range.setEnd(textNode, count)
-
-        const wrapper = document.createElement('span')
-        wrapper.className = className
-        range.surroundContents(wrapper)
-
-        remaining -= count
-    }
-}
-
-function wrapTextFromEnd(root: Node, length: number, className: string) {
-    let remaining = length
-
-    for (const textNode of getTextNodes(root).reverse()) {
-        if (remaining <= 0) break
-
-        const count = Math.min(remaining, textNode.data.length)
-        const range = document.createRange()
-
-        range.setStart(textNode, textNode.data.length - count)
-        range.setEnd(textNode, textNode.data.length)
-
-        const wrapper = document.createElement('span')
-        wrapper.className = className
-        range.surroundContents(wrapper)
-
-        remaining -= count
-    }
-}
-
-function hideDialogueMarkers(node: Node, fullText: string) {
-    if (!(node instanceof HTMLElement)) return
-
-    if (node.querySelector('.cx-dialogue-prefix, .cx-dialogue-suffix')) {
-        return
+    if (!match) {
+        return null
     }
 
-    const leadingLength = fullText.match(/^\s*/)?.[0].length ?? 0
-    const opening = fullText.trim().match(DIALOGUE_OPEN_PATTERN)?.[0]
-    const closing = fullText.match(DIALOGUE_CLOSE_PATTERN)?.[0]
-
-    if (opening) {
-        wrapTextFromStart(
-            node,
-            leadingLength + opening.length,
-            'cx-dialogue-prefix',
-        )
-    }
-
-    if (closing) {
-        wrapTextFromEnd(node, closing.length, 'cx-dialogue-suffix')
-    }
-}
-
-function getContentBlocks(contentHost: HTMLElement): ContentBlock[] {
-    return Array.from(contentHost.childNodes)
-        .filter((node) => {
-            if (node.nodeType === Node.TEXT_NODE) {
-                return Boolean(node.textContent?.trim())
-            }
-
-            if (
-                node.nodeType === Node.ELEMENT_NODE &&
-                (node as HTMLElement).classList.contains('cx-react-mount')
-            ) {
-                return false
-            }
-
-            return node.nodeType === Node.ELEMENT_NODE
-        })
-        .map((node) => {
-            const fullText = node.textContent ?? ''
-            const match = fullText.trim().match(DIALOGUE_PATTERN)
-
-            if (!match) {
-                return { node }
-            }
-
-            hideDialogueMarkers(node, fullText)
-
-            return {
-                node,
-                speaker: match[1].trim(),
-            }
-        })
-}
-
-function cleanupState(state: RenderState) {
-    const shouldRestore = state.mount.isConnected && state.contentHost.isConnected
-
-    state.observer.disconnect()
-    state.root.unmount()
-
-    if (shouldRestore) {
-        // DomSlot 卸载时会把节点放回去；这里按原始顺序再整理一次。
-        state.blocks.forEach((block) => {
-            state.contentHost.appendChild(block.node)
-        })
-    }
-
-    state.mount.remove()
-}
-
-function scheduleRemount(messageId: number) {
-    queueMicrotask(() => {
-        if (!contentRenderActive) return
-
-        const state = renderStates.get(messageId)
-
-        if (state && state.mount.isConnected && state.contentHost.isConnected) {
-            return
-        }
-
-        renderMessage(messageId)
-    })
+    return match[1].trim()
 }
 
 function renderMessage(messageId: number) {
-    const mesText = getMessageText(messageId)
+    const displayed = retrieveDisplayedMessage(messageId)[0] as HTMLElement | undefined
+
+    if (!displayed) return
+
+    const mesText = displayed.matches('.mes_text')
+        ? displayed
+        : displayed.querySelector<HTMLElement>('.mes_text')
 
     if (!mesText) return
 
-    const contentHost = getContentHost(mesText)
+    const content = extractContent(messageId)
 
-    if (!contentHost) return
+    if (!content) return
+
+    const contentHost = mesText.querySelector<HTMLElement>('[data-cx-content]')
+
+    if (!contentHost) {
+        console.warn(`[苍玄界] 找不到 content 节点，第 ${messageId} 楼跳过渲染`)
+        return
+    }
 
     const oldState = renderStates.get(messageId)
 
-    // 已经挂载时不重复 render，给其他插件留下修改最终 DOM 的空间。
     if (
         oldState &&
         oldState.mesText === mesText &&
-        oldState.contentHost === contentHost &&
-        oldState.mount.isConnected
+        oldState.mount.isConnected &&
+        oldState.mount.parentElement === contentHost
     ) {
+        oldState.root.render(<ContentRenderer content={content} />)
         return
     }
 
     if (oldState) {
+        oldState.root.unmount()
         renderStates.delete(messageId)
-        cleanupState(oldState)
     }
 
-    const blocks = getContentBlocks(contentHost)
-
-    if (blocks.length === 0) return
+    const originalHtml = contentHost.innerHTML
 
     const mount = document.createElement('div')
     mount.className = 'cx-react-mount'
-    contentHost.append(mount)
+
+    /*
+     * 只替换 <content> 内部
+     */
+    contentHost.replaceChildren(mount)
 
     const root = createRoot(mount)
-    const observer = new MutationObserver(() => {
-        const state = renderStates.get(messageId)
 
-        if (!state || !state.mount.isConnected || !state.contentHost.isConnected) {
-            scheduleRemount(messageId)
-        }
-    })
+    root.render(<ContentRenderer content={content} />)
 
-    const state: RenderState = {
+    renderStates.set(messageId, {
         mesText,
         contentHost,
         mount,
         root,
-        blocks,
-        observer,
-    }
-
-    renderStates.set(messageId, state)
-    observer.observe(mesText, { childList: true, subtree: true })
-
-    root.render(
-        <ContentRenderer blocks={blocks} contentHost={contentHost} />,
-    )
+        originalHtml,
+    })
 }
 
 function renderAll() {
@@ -282,7 +143,6 @@ function renderAll() {
 }
 
 export function startContentRender() {
-    contentRenderActive = true
     renderAll()
 
     const listeners = [
@@ -293,11 +153,16 @@ export function startContentRender() {
     ]
 
     return () => {
-        contentRenderActive = false
-
         listeners.forEach((listener) => listener.stop())
 
-        renderStates.forEach((state) => cleanupState(state))
+        renderStates.forEach(({ root, contentHost, mount, originalHtml }) => {
+            root.unmount()
+
+            if (contentHost.isConnected && mount.parentElement === contentHost) {
+                contentHost.innerHTML = originalHtml
+            }
+        })
+
         renderStates.clear()
     }
 }
