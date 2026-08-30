@@ -11,7 +11,7 @@
     --border: #bbb5ac;
     --cx-paper-color: #fbeee2;
     --ink-heavy: #1f1b18;   /* 浓墨：人名、台词重点 */
-    --ink-body:  #332d29;   /* 焦墨：叙述 */
+    --ink-medium:  #332d29;   /* 焦墨：叙述 */
     --ink-mute:  #5c534d;   /* 淡墨：注释 */
 }
 
@@ -19,7 +19,7 @@
     --font-dialogue-name: var(--dialogue-name-font);
     --color-border: var(--border);
     --color-ink-heavy: var(--ink-heavy);
-    --color-ink-body: var(--ink-body);
+    --color-ink-medium: var(--ink-medium);
     --color-ink-mute: var(--ink-mute);
 }
 
@@ -47,7 +47,7 @@
     }
 
     .cx-dialogue-content {
-        @apply text-ink-heavy;
+        @apply text-base text-ink-medium;
     }
 }
 
@@ -58,6 +58,6 @@
     }
 
     .cx-narration {
-        @apply py-2 text-ink-body;
+        @apply text-base py-2 text-ink-heavy;
     }
 }
