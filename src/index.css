@@ -24,25 +24,18 @@
     }
 
     .cx-dialogue-name, .cx-dialogue-name-head {
-        @apply text-shadow-md;
+        @apply font-dialogue-name! text-shadow-md!;
     }
 
     .cx-dialogue-name {
-        @apply text-2xl;
+        @apply text-2xl!;
     }
 
     .cx-dialogue-name-head {
-        @apply text-3xl;
+        @apply text-3xl!;
     }
 
     .cx-dialogue-content {
-        @apply text-sm;
+        @apply text-sm!;
     }
-}
-
-/* This stylesheet is injected into SillyTavern, whose unlayered rules can
-   otherwise override Tailwind's layered component declarations. */
-.cx-dialogue-name,
-.cx-dialogue-name-head {
-    font-family: var(--dialogue-name-font), cursive !important;
 }
