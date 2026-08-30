@@ -10521,7 +10521,7 @@ function er(e) {
 	return t ? t.matches(".mes_text") ? t : t.querySelector(".mes_text") : null;
 }
 function tr(e) {
-	return e.querySelector("[data-cx-content]");
+	return e.querySelector("[data-cx-content], content");
 }
 function nr(e) {
 	return Array.from(e.childNodes).filter((e) => e.nodeType === Node.TEXT_NODE ? !!e.textContent?.trim() : e.nodeType === Node.ELEMENT_NODE);

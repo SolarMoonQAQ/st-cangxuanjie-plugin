@@ -73,7 +73,8 @@ function getMessageText(messageId: number): HTMLElement | null {
 }
 
 function getContentHost(mesText: HTMLElement): HTMLElement | null {
-    return mesText.querySelector<HTMLElement>('[data-cx-content]')
+    // 新格式使用 div，兼容之前已经生成的 <content> 消息。
+    return mesText.querySelector<HTMLElement>('[data-cx-content], content')
 }
 
 function getMeaningfulNodes(root: HTMLElement): Node[] {
