@@ -10541,7 +10541,7 @@ function nr(e) {
 	return e.querySelector("[data-cx-content], content");
 }
 function rr(e) {
-	let t = document.createTreeWalker(e, NodeFilter.SHOW_TEXT), n = [];
+	let t = (e.ownerDocument ?? document).createTreeWalker(e, NodeFilter.SHOW_TEXT), n = [];
 	for (; t.nextNode();) n.push(t.currentNode);
 	return n;
 }
@@ -10549,30 +10549,42 @@ function ir(e, t, n) {
 	let r = t;
 	for (let t of rr(e)) {
 		if (r <= 0) break;
-		let e = Math.min(r, t.data.length), i = document.createRange();
-		i.setStart(t, 0), i.setEnd(t, e);
-		let a = document.createElement("span");
-		a.className = n, i.surroundContents(a), r -= e;
+		let i = Math.min(r, t.data.length), a = e.ownerDocument ?? document, o = a.createRange();
+		o.setStart(t, 0), o.setEnd(t, i);
+		let s = a.createElement("span");
+		s.className = n, o.surroundContents(s), r -= i;
 	}
 }
 function ar(e, t, n) {
 	let r = t;
 	for (let t of rr(e).reverse()) {
 		if (r <= 0) break;
-		let e = Math.min(r, t.data.length), i = document.createRange();
-		i.setStart(t, t.data.length - e), i.setEnd(t, t.data.length);
-		let a = document.createElement("span");
-		a.className = n, i.surroundContents(a), r -= e;
+		let i = Math.min(r, t.data.length), a = e.ownerDocument ?? document, o = a.createRange();
+		o.setStart(t, t.data.length - i), o.setEnd(t, t.data.length);
+		let s = a.createElement("span");
+		s.className = n, o.surroundContents(s), r -= i;
 	}
 }
 function or(e, t) {
 	let n;
-	if (e instanceof HTMLElement ? n = e : (n = document.createElement("span"), e.parentNode?.replaceChild(n, e), n.appendChild(e)), n.querySelector(".cx-dialogue-prefix, .cx-dialogue-suffix")) return n;
+	if (e instanceof HTMLElement ? n = e : (n = (e.ownerDocument ?? document).createElement("span"), e.parentNode?.replaceChild(n, e), n.appendChild(e)), n.querySelector(".cx-dialogue-prefix, .cx-dialogue-suffix")) return n;
 	let r = t.match(/^\s*/)?.[0].length ?? 0, i = t.trim().match(Yn)?.[0], a = t.match(Xn)?.[0];
 	return i && ir(n, r + i.length, "cx-dialogue-prefix"), a && ar(n, a.length, "cx-dialogue-suffix"), n;
 }
 function sr(e) {
-	return Array.from(e.childNodes).filter((e) => e.nodeType === Node.TEXT_NODE ? !!e.textContent?.trim() : e.nodeType === Node.ELEMENT_NODE && e.classList.contains("cx-react-mount") ? !1 : e.nodeType === Node.ELEMENT_NODE).map((e) => {
+	let t = Array.from(e.childNodes).filter((e) => e.nodeType === Node.TEXT_NODE ? !!e.textContent?.trim() : e.nodeType === Node.ELEMENT_NODE && e.classList.contains("cx-react-mount") ? !1 : e.nodeType === Node.ELEMENT_NODE);
+	if (t.length !== 1 || t[0].nodeType !== Node.TEXT_NODE) return t;
+	let n = (t[0].textContent ?? "").split(/\n{2,}/).map((e) => e.trim()).filter(Boolean);
+	if (n.length <= 1) return t;
+	let r = e.ownerDocument ?? document, i = r.createDocumentFragment();
+	for (let e of n) {
+		let t = r.createElement("p");
+		t.textContent = e, i.appendChild(t);
+	}
+	return e.replaceChild(i, t[0]), sr(e);
+}
+function cr(e) {
+	return sr(e).map((e) => {
 		let t = e.textContent ?? "", n = t.trim().match(Jn);
 		return n ? {
 			node: or(e, t),
@@ -10580,46 +10592,62 @@ function sr(e) {
 		} : { node: e };
 	});
 }
-function cr(e) {
+function lr(e, t) {
+	let n = Array.from(t.children).filter((e) => e.classList.contains("cx-react-mount"));
+	if (n.length === 0) return !1;
+	let r = !1;
+	for (let e of n) {
+		let n = Array.from(e.querySelectorAll(".cx-dom-slot"));
+		if (n.length === 0) {
+			e.remove(), r = !0;
+			continue;
+		}
+		for (let e of n) for (; e.firstChild;) t.appendChild(e.firstChild);
+		e.remove();
+	}
+	return r && refreshOneMessage(e).catch((e) => {
+		console.error("[苍玄界] 恢复旧正文失败", e);
+	}), !0;
+}
+function ur(e) {
 	let t = e.mount.isConnected && e.contentHost.isConnected;
 	e.observer.disconnect(), e.root.unmount(), t && e.blocks.forEach((t) => e.contentHost.appendChild(t.node)), e.mount.remove();
 }
-function lr(e) {
+function dr(e) {
 	let t = Zn.get(e);
-	t && (Zn.delete(e), cr(t));
+	t && (Zn.delete(e), ur(t));
 }
-function ur(e, t = !1) {
-	t && lr(e);
+function fr(e, t = !1) {
+	t && dr(e);
 	let n = Qn.get(e);
 	n !== void 0 && window.clearTimeout(n);
 	let r = window.setTimeout(() => {
 		Qn.delete(e), window.requestAnimationFrame(() => {
-			$n && dr(e);
+			$n && pr(e);
 		});
 	}, 0);
 	Qn.set(e, r);
 }
-function dr(e) {
+function pr(e) {
 	let t = tr(e);
 	if (!t) {
-		lr(e);
+		dr(e);
 		return;
 	}
 	let n = nr(t);
 	if (!n) {
-		lr(e);
+		dr(e);
 		return;
 	}
 	let r = Zn.get(e);
-	if (r && r.mesText === t && r.contentHost === n && r.mount.isConnected) return;
-	r && (Zn.delete(e), cr(r));
-	let i = sr(n);
+	if (r && r.mesText === t && r.contentHost === n && r.mount.isConnected || (r && (Zn.delete(e), ur(r)), lr(e, n) && !n.childNodes.length)) return;
+	let i = cr(n);
 	if (i.length === 0) return;
-	let a = document.createElement("div");
+	let a = (n.ownerDocument ?? document).createElement("div");
 	a.className = "cx-react-mount", n.append(a);
 	let o = (0, g.createRoot)(a), s = new MutationObserver(() => {
 		let t = Zn.get(e);
-		(!t || !t.mount.isConnected || !t.contentHost.isConnected) && ur(e);
+		(!t || !t.mount.isConnected || !t.contentHost.isConnected) && fr(e);
 	}), c = {
 		mesText: t,
 		contentHost: n,
@@ -10631,32 +10659,39 @@ function dr(e) {
 	Zn.set(e, c), s.observe(t, {
 		childList: !0,
 		subtree: !0
-	}), o.render(/* @__PURE__ */ (0, M.jsx)(Kn, {
-		blocks: i,
-		contentHost: n
-	}));
+	});
+	try {
+		(0, Ke.flushSync)(() => {
+			o.render(/* @__PURE__ */ (0, M.jsx)(Kn, {
+				blocks: i,
+				contentHost: n
+			}));
+		});
+	} catch (t) {
+		console.error(`[苍玄界] 第 ${e} 楼 React 挂载失败`, t), dr(e);
+	}
 }
-function fr() {
-	for (let e = 0; e < SillyTavern.chat.length; e++) ur(e);
+function mr() {
+	for (let e = 0; e < SillyTavern.chat.length; e++) fr(e);
 }
-function pr() {
-	$n = !0, fr();
+function hr() {
+	$n = !0, mr();
 	let e = [
-		eventOn(tavern_events.CHAT_CHANGED, fr),
-		eventOn(tavern_events.CHARACTER_MESSAGE_RENDERED, (e) => ur(e, !0)),
-		eventOn(tavern_events.MESSAGE_EDITED, (e) => ur(e, !0)),
-		eventOn(tavern_events.MESSAGE_UPDATED, (e) => ur(e, !0))
+		eventOn(tavern_events.CHAT_CHANGED, mr),
+		eventOn(tavern_events.CHARACTER_MESSAGE_RENDERED, (e) => fr(e, !0)),
+		eventOn(tavern_events.MESSAGE_EDITED, (e) => fr(e, !0)),
+		eventOn(tavern_events.MESSAGE_UPDATED, (e) => fr(e, !0))
 	];
 	return () => {
-		$n = !1, e.forEach((e) => e.stop()), Qn.forEach((e) => window.clearTimeout(e)), Qn.clear(), Zn.forEach((e) => cr(e)), Zn.clear();
+		$n = !1, e.forEach((e) => e.stop()), Qn.forEach((e) => window.clearTimeout(e)), Qn.clear(), Zn.forEach((e) => ur(e)), Zn.clear();
 	};
 }
 //#endregion
 //#region src/main.tsx
-var mr = "tavern-cangxuanjie-root", hr = "cangxuanjie-plugin-style", gr = null, _r = null, vr = null, yr = null;
+var gr = "tavern-cangxuanjie-root", _r = "cangxuanjie-plugin-style", vr = null, yr = null, br = null, xr = null;
 $(() => {
-	$(`#${mr}`).remove(), _r = $("<div>").attr("id", mr).appendTo("body")[0], gr = (0, g.createRoot)(_r), toastr.success("苍玄界插件已加载"), $(`#${hr}`).remove(), $("<style>").attr("id", hr).text(_).appendTo("head"), vr = er(), yr = pr();
+	$(`#${gr}`).remove(), yr = $("<div>").attr("id", gr).appendTo("body")[0], vr = (0, g.createRoot)(yr), toastr.success("苍玄界插件已加载"), $(`#${_r}`).remove(), $("<style>").attr("id", _r).text(_).appendTo("head"), br = er(), xr = hr();
 }), $(window).on("pagehide", () => {
-	gr?.unmount(), _r?.remove(), gr = null, _r = null, $(`#${hr}`).remove(), vr?.(), vr = null, yr?.(), yr = null;
+	vr?.unmount(), yr?.remove(), vr = null, yr = null, $(`#${_r}`).remove(), br?.(), br = null, xr?.(), xr = null;
 });
 //#endregion

@@ -1,3 +1,4 @@
+import { flushSync } from 'react-dom'
 import { createRoot, type Root } from 'react-dom/client'
 import ContentRenderer, { type ContentBlock } from './ContentRenderer'
 
@@ -77,7 +78,8 @@ function getContentHost(mesText: HTMLElement): HTMLElement | null {
 }
 
 function getTextNodes(root: Node): Text[] {
-    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT)
+    const ownerDocument = root.ownerDocument ?? document
+    const walker = ownerDocument.createTreeWalker(root, NodeFilter.SHOW_TEXT)
     const nodes: Text[] = []
 
     while (walker.nextNode()) {
@@ -94,12 +96,13 @@ function wrapTextFromStart(root: Node, length: number, className: string) {
         if (remaining <= 0) break
 
         const count = Math.min(remaining, textNode.data.length)
-        const range = document.createRange()
+        const ownerDocument = root.ownerDocument ?? document
+        const range = ownerDocument.createRange()
 
         range.setStart(textNode, 0)
         range.setEnd(textNode, count)
 
-        const wrapper = document.createElement('span')
+        const wrapper = ownerDocument.createElement('span')
         wrapper.className = className
         range.surroundContents(wrapper)
 
@@ -114,12 +117,13 @@ function wrapTextFromEnd(root: Node, length: number, className: string) {
         if (remaining <= 0) break
 
         const count = Math.min(remaining, textNode.data.length)
-        const range = document.createRange()
+        const ownerDocument = root.ownerDocument ?? document
+        const range = ownerDocument.createRange()
 
         range.setStart(textNode, textNode.data.length - count)
         range.setEnd(textNode, textNode.data.length)
 
-        const wrapper = document.createElement('span')
+        const wrapper = ownerDocument.createElement('span')
         wrapper.className = className
         range.surroundContents(wrapper)
 
@@ -133,7 +137,7 @@ function hideDialogueMarkers(node: Node, fullText: string): Node {
     if (node instanceof HTMLElement) {
         element = node
     } else {
-        element = document.createElement('span')
+        element = (node.ownerDocument ?? document).createElement('span')
         node.parentNode?.replaceChild(element, node)
         element.appendChild(node)
     }
@@ -161,22 +165,50 @@ function hideDialogueMarkers(node: Node, fullText: string): Node {
     return element
 }
 
+function getContentNodes(contentHost: HTMLElement): Node[] {
+    const nodes = Array.from(contentHost.childNodes).filter((node) => {
+        if (node.nodeType === Node.TEXT_NODE) {
+            return Boolean(node.textContent?.trim())
+        }
+
+        if (
+            node.nodeType === Node.ELEMENT_NODE &&
+            (node as HTMLElement).classList.contains('cx-react-mount')
+        ) {
+            return false
+        }
+
+        return node.nodeType === Node.ELEMENT_NODE
+    })
+
+    if (nodes.length !== 1 || nodes[0].nodeType !== Node.TEXT_NODE) {
+        return nodes
+    }
+
+    const text = nodes[0].textContent ?? ''
+    const parts = text
+        .split(/\n{2,}/)
+        .map((part) => part.trim())
+        .filter(Boolean)
+
+    if (parts.length <= 1) return nodes
+
+    const ownerDocument = contentHost.ownerDocument ?? document
+    const fragment = ownerDocument.createDocumentFragment()
+
+    for (const part of parts) {
+        const paragraph = ownerDocument.createElement('p')
+        paragraph.textContent = part
+        fragment.appendChild(paragraph)
+    }
+
+    contentHost.replaceChild(fragment, nodes[0])
+
+    return getContentNodes(contentHost)
+}
+
 function getContentBlocks(contentHost: HTMLElement): ContentBlock[] {
-    return Array.from(contentHost.childNodes)
-        .filter((node) => {
-            if (node.nodeType === Node.TEXT_NODE) {
-                return Boolean(node.textContent?.trim())
-            }
-
-            if (
-                node.nodeType === Node.ELEMENT_NODE &&
-                (node as HTMLElement).classList.contains('cx-react-mount')
-            ) {
-                return false
-            }
-
-            return node.nodeType === Node.ELEMENT_NODE
-        })
+    return getContentNodes(contentHost)
         .map((node) => {
             const fullText = node.textContent ?? ''
             const match = fullText.trim().match(DIALOGUE_PATTERN)
@@ -190,6 +222,47 @@ function getContentBlocks(contentHost: HTMLElement): ContentBlock[] {
                 speaker: match[1].trim(),
             }
         })
+}
+
+/**
+ * 热重载或插件重复执行时，旧 React root 可能还留在聊天 DOM 中。
+ * DOM Slot 版本可以把旧 root 里的真实节点取回；旧字符串版本没有真实
+ * 节点，只能让酒馆重新生成一次最终显示 DOM。
+ */
+function recoverOrphanedMount(messageId: number, contentHost: HTMLElement): boolean {
+    const mounts = Array.from(contentHost.children).filter((element) => {
+        return element.classList.contains('cx-react-mount')
+    })
+
+    if (mounts.length === 0) return false
+
+    let needsRefresh = false
+
+    for (const mount of mounts) {
+        const slots = Array.from(mount.querySelectorAll('.cx-dom-slot'))
+
+        if (slots.length === 0) {
+            mount.remove()
+            needsRefresh = true
+            continue
+        }
+
+        for (const slot of slots) {
+            while (slot.firstChild) {
+                contentHost.appendChild(slot.firstChild)
+            }
+        }
+
+        mount.remove()
+    }
+
+    if (needsRefresh) {
+        void refreshOneMessage(messageId).catch((error: unknown) => {
+            console.error('[苍玄界] 恢复旧正文失败', error)
+        })
+    }
+
+    return true
 }
 
 function cleanupState(state: RenderState) {
@@ -270,11 +343,18 @@ function renderMessage(messageId: number) {
         cleanupState(oldState)
     }
 
+    if (recoverOrphanedMount(messageId, contentHost)) {
+        // 旧字符串 root 已经要求酒馆刷新；真实 DOM root 则已恢复节点，
+        // 继续从恢复后的 contentHost 读取最终节点。
+        if (!contentHost.childNodes.length) return
+    }
+
     const blocks = getContentBlocks(contentHost)
 
     if (blocks.length === 0) return
 
-    const mount = document.createElement('div')
+    const ownerDocument = contentHost.ownerDocument ?? document
+    const mount = ownerDocument.createElement('div')
     mount.className = 'cx-react-mount'
     contentHost.append(mount)
 
@@ -299,9 +379,16 @@ function renderMessage(messageId: number) {
     renderStates.set(messageId, state)
     observer.observe(mesText, { childList: true, subtree: true })
 
-    root.render(
-        <ContentRenderer blocks={blocks} contentHost={contentHost} />,
-    )
+    try {
+        flushSync(() => {
+            root.render(
+                <ContentRenderer blocks={blocks} contentHost={contentHost} />,
+            )
+        })
+    } catch (error: unknown) {
+        console.error(`[苍玄界] 第 ${messageId} 楼 React 挂载失败`, error)
+        disposeState(messageId)
+    }
 }
 
 function renderAll() {
