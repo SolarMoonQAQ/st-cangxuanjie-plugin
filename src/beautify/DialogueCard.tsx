@@ -1,5 +1,6 @@
 import { Avatar, AvatarFallback, AvatarImage } from '@/shared/components/ui/avatar.tsx'
 import { Separator } from '@base-ui/react'
+import { getSpeakerProfile } from '../common/speakerProfiles.ts'
 
 type DialogueProps = {
     speaker: string
@@ -9,11 +10,12 @@ type DialogueProps = {
 export default function DialogueCard({ speaker, content }: DialogueProps) {
     const nameHead = speaker.charAt(0)
     const nameTail = speaker.slice(1)
+    const profile = getSpeakerProfile(speaker)
 
     return (
         <div className="flex">
             <Avatar className="h-10 w-10 shrink-0 cx-avatar">
-                <AvatarImage src="https://github.com/shadcn.png" />
+                <AvatarImage src={profile.avatar} alt={`${speaker}头像`} />
                 <AvatarFallback>👤</AvatarFallback>
             </Avatar>
 
