@@ -1,10 +1,9 @@
 @import 'tailwindcss';
 @font-face {
     font-family: "Zhi Mang Xing";
-    src: url("https://testingcf.jsdelivr.net/gh/SolarMoonQAQ/st-cangxuanjie-plugin@master/dist/fonts/ZhiMangXing-Regular.ttf") format("truetype");
+    src: url("../public/fonts/ZhiMangXing-Regular.ttf");
     font-weight: 400;
     font-style: normal;
-    font-display: swap;
 }
 
 :root {
@@ -31,7 +30,7 @@
     }
 
     .cx-dialogue-name, .cx-dialogue-name-head {
-        @apply text-shadow-md;
+        @apply font-dialogue-name text-shadow-md;
     }
 
     .cx-dialogue-name {
@@ -45,11 +44,4 @@
     .cx-dialogue-content {
         @apply text-sm;
     }
-}
-
-/* This stylesheet is injected into SillyTavern, whose unlayered rules can
-   otherwise override Tailwind's layered component declarations. */
-.cx-dialogue-name,
-.cx-dialogue-name-head {
-    font-family: var(--dialogue-name-font), cursive !important;
 }
