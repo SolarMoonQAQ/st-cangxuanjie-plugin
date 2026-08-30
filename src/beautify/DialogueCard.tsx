@@ -14,7 +14,7 @@ export default function DialogueCard({ speaker, content }: DialogueProps) {
         <div className="flex">
             <Avatar className="h-10 w-10 shrink-0 cx-avatar">
                 <AvatarImage src="https://github.com/shadcn.png" />
-                <AvatarFallback>{nameHead}</AvatarFallback>
+                <AvatarFallback>👤</AvatarFallback>
             </Avatar>
 
             <div className="flex flex-col items-center shrink-0 ml-2">
