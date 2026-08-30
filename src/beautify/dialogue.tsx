@@ -29,12 +29,19 @@ function beautifyMessage(messageId: number) {
     if (element) beautifyElement(element)
 }
 
+function beautifyAll() {
+    $('.mes_text').each((_index, element) => {
+        beautifyElement(element as HTMLElement)
+    })
+}
+
 export function startBeautify() {
     $('.mes_text').each((_index, element) => {
         beautifyElement(element as HTMLElement)
     })
 
     const listeners = [
+        eventOn(tavern_events.CHAT_CHANGED, beautifyAll),
         eventOn(tavern_events.CHARACTER_MESSAGE_RENDERED, beautifyMessage),
         eventOn(tavern_events.MESSAGE_UPDATED, beautifyMessage),
     ]
