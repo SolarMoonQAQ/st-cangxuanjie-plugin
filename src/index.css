@@ -1,4 +1,5 @@
-@import 'tailwindcss';
+@import 'tailwindcss/theme.css';
+@import 'tailwindcss/utilities.css';
 @font-face {
     font-family: "Zhi Mang Xing";
     src: url("../public/fonts/ZhiMangXing-Regular.ttf");
