@@ -12,20 +12,20 @@ const contentPrompt = {
     content: `
 输出时必须遵守以下格式：
 
-1. 所有面向用户展示的正文内容，包括旁白、动作、环境描写、角色对话，都必须放在唯一的一对 <content> 和 </content> 标签内。
-2. 除了 <content>...</content> 外，不要输出任何正文内容。
+1. 所有面向用户展示的正文内容，包括旁白、动作、环境描写、角色对话，都必须放在唯一的一对 <div data-cx-content> 和 </div> 标签内。
+2. 除了 <div data-cx-content>...</div> 外，不要输出任何正文内容。
 3. 不要遗漏标签，不要嵌套 content 标签。
 4. 不要把标签放进 Markdown 代码块中。
 
 格式示例：
 
-<content>
+<div data-cx-content>
 这里是完整的正文内容。
-</content>
+</div>
 `,
 }
 
-const CONTENT_BLOCK_PATTERN = /<content\b[^>]*>([\s\S]*?)<\/content>/i
+const CONTENT_BLOCK_PATTERN = /<div\b[^>]*data-cx-content[^>]*>([\s\S]*?)<\/div>/i
 
 type RenderState = {
     mesText: HTMLElement
@@ -89,7 +89,7 @@ function renderMessage(messageId: number) {
 
     if (!content) return
 
-    const contentHost = mesText.querySelector<HTMLElement>('content')
+    const contentHost = mesText.querySelector<HTMLElement>('[data-cx-content]')
 
     if (!contentHost) {
         console.warn(`[苍玄界] 找不到 content 节点，第 ${messageId} 楼跳过渲染`)

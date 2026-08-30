@@ -15,6 +15,31 @@
     --ink-mute:  #5c534d;   /* 淡墨：注释 */
 }
 
+:root {
+    /* 酒馆自身的基础字号 */
+    --cx-st-font-size: var(--mainFontSize, 15px);
+
+    /* 插件整体缩放比例 */
+    --cx-font-scale: 1;
+
+    /* 插件最终字号 */
+    --cx-body-size: calc(
+            var(--cx-st-font-size) * var(--cx-font-scale) * 1.15
+    );
+
+    --cx-dialogue-size: calc(
+            var(--cx-body-size) * 0.95
+    );
+
+    --cx-name-size: calc(
+            var(--cx-body-size) * 1.35
+    );
+
+    --cx-name-head-size: calc(
+            var(--cx-body-size) * 1.75
+    );
+}
+
 @theme {
     --font-dialogue-name: var(--dialogue-name-font);
     --color-border: var(--border);
@@ -24,30 +49,27 @@
 }
 
 @layer components {
-    .cx-dialogue {
+    .cx-bg {
+        @apply bg-(--cx-paper-color) p-6 rounded-lg border border-amber-900/15 shadow-md;
+        @apply text-(length:--cx-body-size) leading-relaxed;
+
+        background-image: url('./assets/textures/handmade-paper.png');
+    }
+
+    .cx-narration {
         @apply py-2;
     }
 
-    .cx-avatar,
-    .cx-avatar *,
-    .cx-avatar::after {
-        border-radius: var(--radius-lg, 0.5rem) !important;
-    }
-
-    .cx-dialogue-name, .cx-dialogue-name-head {
-        @apply font-dialogue-name! text-shadow-md! text-black;
+    .cx-dialogue-content {
+        @apply text-(length:--cx-dialogue-size) text-ink-medium leading-relaxed;
     }
 
     .cx-dialogue-name {
-        @apply text-2xl!;
+        @apply font-dialogue-name! text-(length:--cx-name-size)! tracking-wide;
     }
 
     .cx-dialogue-name-head {
-        @apply text-3xl!;
-    }
-
-    .cx-dialogue-content {
-        @apply text-base text-ink-medium;
+        @apply font-dialogue-name! text-(length:--cx-name-head-size)!;
     }
 }
 
@@ -58,6 +80,6 @@
     }
 
     .cx-narration {
-        @apply text-base py-2 text-ink-heavy;
+        @apply text-(length:--cx-body-size) py-2 text-ink-heavy leading-relaxed;
     }
 }
