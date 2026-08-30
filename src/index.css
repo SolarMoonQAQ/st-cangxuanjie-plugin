@@ -16,33 +16,24 @@
     --color-border: var(--border);
 }
 
-@layer components {
-    .cx-avatar,
-    .cx-avatar *,
-    .cx-avatar::after {
-        border-radius: var(--radius-lg, 0.5rem) !important;
-    }
-
-    .cx-dialogue-name, .cx-dialogue-name-head {
-        @apply text-shadow-md;
-    }
-
-    .cx-dialogue-name {
-        @apply text-2xl;
-    }
-
-    .cx-dialogue-name-head {
-        @apply text-3xl;
-    }
-
-    .cx-dialogue-content {
-        @apply text-sm;
-    }
+.cx-avatar,
+.cx-avatar *,
+.cx-avatar::after {
+    border-radius: var(--radius-lg, 0.5rem) !important;
 }
 
-/* This stylesheet is injected into SillyTavern, whose unlayered rules can
-   otherwise override Tailwind's layered component declarations. */
-.cx-dialogue-name,
+.cx-dialogue-name, .cx-dialogue-name-head {
+    @apply text-shadow-md;
+}
+
+.cx-dialogue-name {
+    @apply text-2xl;
+}
+
 .cx-dialogue-name-head {
-    font-family: var(--dialogue-name-font), cursive !important;
+    @apply text-3xl;
+}
+
+.cx-dialogue-content {
+    @apply text-sm;
 }
