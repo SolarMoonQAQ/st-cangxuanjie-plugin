@@ -35,7 +35,6 @@ export function startBeautify() {
     })
 
     const listeners = [
-        eventOn(tavern_events.USER_MESSAGE_RENDERED, beautifyMessage),
         eventOn(tavern_events.CHARACTER_MESSAGE_RENDERED, beautifyMessage),
         eventOn(tavern_events.MESSAGE_UPDATED, beautifyMessage),
     ]
