@@ -143,14 +143,35 @@ function renderAll() {
     }
 }
 
+const pendingRenders = new Map<number, number>()
+
+function scheduleRenderMessage(messageId: number) {
+    const previous = pendingRenders.get(messageId)
+
+    if (previous !== undefined) {
+        cancelAnimationFrame(previous)
+    }
+
+    const frame = requestAnimationFrame(() => {
+        const secondFrame = requestAnimationFrame(() => {
+            pendingRenders.delete(messageId)
+            renderMessage(messageId)
+        })
+
+        pendingRenders.set(messageId, secondFrame)
+    })
+
+    pendingRenders.set(messageId, frame)
+}
+
 export function startContentRender() {
     renderAll()
 
     const listeners = [
-        eventOn(tavern_events.CHAT_CHANGED, renderAll),
-        eventOn(tavern_events.CHARACTER_MESSAGE_RENDERED, renderMessage),
-        eventOn(tavern_events.MESSAGE_EDITED, renderMessage),
-        eventOn(tavern_events.MESSAGE_UPDATED, renderMessage),
+        eventOn(tavern_events.CHAT_CHANGED, () => requestAnimationFrame(renderAll)),
+        eventOn(tavern_events.CHARACTER_MESSAGE_RENDERED, scheduleRenderMessage),
+        eventOn(tavern_events.MESSAGE_EDITED, scheduleRenderMessage),
+        eventOn(tavern_events.MESSAGE_UPDATED, scheduleRenderMessage),
     ]
 
     return () => {
