@@ -1,5 +1,5 @@
 import { createRoot, type Root } from 'react-dom/client'
-import ContentRenderer from './ContentRenderer'
+import ContentRenderer, { type ContentBlock } from './ContentRenderer'
 
 const CONTENT_PROMPT_ID = 'cangxuanjie-content-format'
 
@@ -25,24 +25,28 @@ const contentPrompt = {
 `,
 }
 
-const CONTENT_BLOCK_PATTERN = /<div\b[^>]*data-cx-content[^>]*>([\s\S]*?)<\/div>/i
+const DIALOGUE_PATTERN = /^【([^】\r\n]+)】\s*[：:]\s*[“"]([\s\S]*?)[”"]$/
+const DIALOGUE_OPEN_PATTERN = /^【[^】\r\n]+】\s*[：:]\s*[“"]/
+const DIALOGUE_CLOSE_PATTERN = /[”"]\s*$/
 
 type RenderState = {
     mesText: HTMLElement
     contentHost: HTMLElement
     mount: HTMLElement
     root: Root
-    originalHtml: string
+    blocks: ContentBlock[]
+    observer: MutationObserver
 }
 
 const renderStates = new Map<number, RenderState>()
+const renderTimers = new Map<number, number>()
+let contentRenderActive = false
 
 export function injectBeautifyPrompt() {
     let uninject: (() => void) | null = null
 
     const installPrompt = () => {
         uninject?.()
-
         uninject = injectPrompts([contentPrompt]).uninject
     }
 
@@ -52,47 +56,201 @@ export function injectBeautifyPrompt() {
 
     return () => {
         listeners.forEach((listener) => listener.stop())
-
         uninject?.()
         uninject = null
     }
 }
 
-export function extractContent(messageId: number): string | null {
-    const message = SillyTavern.chat[messageId]?.mes
+function getMessageText(messageId: number): HTMLElement | null {
+    const displayed = retrieveDisplayedMessage(messageId)[0] as HTMLElement | undefined
 
-    if (typeof message !== 'string') {
-        return null
+    if (!displayed) return null
+
+    return displayed.matches('.mes_text')
+        ? displayed
+        : displayed.querySelector<HTMLElement>('.mes_text')
+}
+
+function getContentHost(mesText: HTMLElement): HTMLElement | null {
+    // 兼容新格式和旧消息；两者都只作为真实 DOM 的定位点。
+    return mesText.querySelector<HTMLElement>('[data-cx-content], content')
+}
+
+function getTextNodes(root: Node): Text[] {
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT)
+    const nodes: Text[] = []
+
+    while (walker.nextNode()) {
+        nodes.push(walker.currentNode as Text)
     }
 
-    const match = message.match(CONTENT_BLOCK_PATTERN)
+    return nodes
+}
 
-    if (!match) {
-        return null
+function wrapTextFromStart(root: Node, length: number, className: string) {
+    let remaining = length
+
+    for (const textNode of getTextNodes(root)) {
+        if (remaining <= 0) break
+
+        const count = Math.min(remaining, textNode.data.length)
+        const range = document.createRange()
+
+        range.setStart(textNode, 0)
+        range.setEnd(textNode, count)
+
+        const wrapper = document.createElement('span')
+        wrapper.className = className
+        range.surroundContents(wrapper)
+
+        remaining -= count
+    }
+}
+
+function wrapTextFromEnd(root: Node, length: number, className: string) {
+    let remaining = length
+
+    for (const textNode of getTextNodes(root).reverse()) {
+        if (remaining <= 0) break
+
+        const count = Math.min(remaining, textNode.data.length)
+        const range = document.createRange()
+
+        range.setStart(textNode, textNode.data.length - count)
+        range.setEnd(textNode, textNode.data.length)
+
+        const wrapper = document.createElement('span')
+        wrapper.className = className
+        range.surroundContents(wrapper)
+
+        remaining -= count
+    }
+}
+
+function hideDialogueMarkers(node: Node, fullText: string): Node {
+    let element: HTMLElement
+
+    if (node instanceof HTMLElement) {
+        element = node
+    } else {
+        element = document.createElement('span')
+        node.parentNode?.replaceChild(element, node)
+        element.appendChild(node)
     }
 
-    return match[1].trim()
+    if (element.querySelector('.cx-dialogue-prefix, .cx-dialogue-suffix')) {
+        return element
+    }
+
+    const leadingLength = fullText.match(/^\s*/)?.[0].length ?? 0
+    const opening = fullText.trim().match(DIALOGUE_OPEN_PATTERN)?.[0]
+    const closing = fullText.match(DIALOGUE_CLOSE_PATTERN)?.[0]
+
+    if (opening) {
+        wrapTextFromStart(
+            element,
+            leadingLength + opening.length,
+            'cx-dialogue-prefix',
+        )
+    }
+
+    if (closing) {
+        wrapTextFromEnd(element, closing.length, 'cx-dialogue-suffix')
+    }
+
+    return element
+}
+
+function getContentBlocks(contentHost: HTMLElement): ContentBlock[] {
+    return Array.from(contentHost.childNodes)
+        .filter((node) => {
+            if (node.nodeType === Node.TEXT_NODE) {
+                return Boolean(node.textContent?.trim())
+            }
+
+            if (
+                node.nodeType === Node.ELEMENT_NODE &&
+                (node as HTMLElement).classList.contains('cx-react-mount')
+            ) {
+                return false
+            }
+
+            return node.nodeType === Node.ELEMENT_NODE
+        })
+        .map((node) => {
+            const fullText = node.textContent ?? ''
+            const match = fullText.trim().match(DIALOGUE_PATTERN)
+
+            if (!match) {
+                return { node }
+            }
+
+            return {
+                node: hideDialogueMarkers(node, fullText),
+                speaker: match[1].trim(),
+            }
+        })
+}
+
+function cleanupState(state: RenderState) {
+    const shouldRestore = state.mount.isConnected && state.contentHost.isConnected
+
+    state.observer.disconnect()
+    state.root.unmount()
+
+    if (shouldRestore) {
+        state.blocks.forEach((block) => state.contentHost.appendChild(block.node))
+    }
+
+    state.mount.remove()
+}
+
+function disposeState(messageId: number) {
+    const state = renderStates.get(messageId)
+
+    if (!state) return
+
+    renderStates.delete(messageId)
+    cleanupState(state)
+}
+
+function scheduleRenderMessage(messageId: number, invalidate = false) {
+    if (invalidate) {
+        disposeState(messageId)
+    }
+
+    const previousTimer = renderTimers.get(messageId)
+
+    if (previousTimer !== undefined) {
+        window.clearTimeout(previousTimer)
+    }
+
+    const timer = window.setTimeout(() => {
+        renderTimers.delete(messageId)
+
+        // 当前事件结束后再读 DOM，确保酒馆和其他显示正则已经完成。
+        window.requestAnimationFrame(() => {
+            if (contentRenderActive) {
+                renderMessage(messageId)
+            }
+        })
+    }, 0)
+
+    renderTimers.set(messageId, timer)
 }
 
 function renderMessage(messageId: number) {
-    const displayed = retrieveDisplayedMessage(messageId)[0] as HTMLElement | undefined
+    const mesText = getMessageText(messageId)
 
-    if (!displayed) return
+    if (!mesText) {
+        disposeState(messageId)
+        return
+    }
 
-    const mesText = displayed.matches('.mes_text')
-        ? displayed
-        : displayed.querySelector<HTMLElement>('.mes_text')
-
-    if (!mesText) return
-
-    const content = extractContent(messageId)
-
-    if (!content) return
-
-    const contentHost = mesText.querySelector<HTMLElement>('[data-cx-content]')
+    const contentHost = getContentHost(mesText)
 
     if (!contentHost) {
-        console.warn(`[苍玄界] 找不到 content 节点，第 ${messageId} 楼跳过渲染`)
+        disposeState(messageId)
         return
     }
 
@@ -101,68 +259,86 @@ function renderMessage(messageId: number) {
     if (
         oldState &&
         oldState.mesText === mesText &&
-        oldState.mount.isConnected &&
-        oldState.mount.parentElement === contentHost
+        oldState.contentHost === contentHost &&
+        oldState.mount.isConnected
     ) {
-        oldState.root.render(<ContentRenderer content={content} />)
         return
     }
 
     if (oldState) {
-        oldState.root.unmount()
         renderStates.delete(messageId)
+        cleanupState(oldState)
     }
 
-    const originalHtml = contentHost.innerHTML
+    const blocks = getContentBlocks(contentHost)
+
+    if (blocks.length === 0) return
 
     const mount = document.createElement('div')
     mount.className = 'cx-react-mount'
-
-    /*
-     * 只替换 <content> 内部
-     */
-    contentHost.replaceChildren(mount)
+    contentHost.append(mount)
 
     const root = createRoot(mount)
+    const observer = new MutationObserver(() => {
+        const state = renderStates.get(messageId)
 
-    root.render(<ContentRenderer content={content} />)
+        if (!state || !state.mount.isConnected || !state.contentHost.isConnected) {
+            scheduleRenderMessage(messageId)
+        }
+    })
 
-    renderStates.set(messageId, {
+    const state: RenderState = {
         mesText,
         contentHost,
         mount,
         root,
-        originalHtml,
-    })
+        blocks,
+        observer,
+    }
+
+    renderStates.set(messageId, state)
+    observer.observe(mesText, { childList: true, subtree: true })
+
+    root.render(
+        <ContentRenderer blocks={blocks} contentHost={contentHost} />,
+    )
 }
 
 function renderAll() {
     for (let messageId = 0; messageId < SillyTavern.chat.length; messageId++) {
-        renderMessage(messageId)
+        scheduleRenderMessage(messageId)
     }
 }
 
 export function startContentRender() {
+    contentRenderActive = true
     renderAll()
 
     const listeners = [
         eventOn(tavern_events.CHAT_CHANGED, renderAll),
-        eventOn(tavern_events.CHARACTER_MESSAGE_RENDERED, renderMessage),
-        eventOn(tavern_events.MESSAGE_EDITED, renderMessage),
-        eventOn(tavern_events.MESSAGE_UPDATED, renderMessage),
+        eventOn(
+            tavern_events.CHARACTER_MESSAGE_RENDERED,
+            (messageId) => scheduleRenderMessage(messageId, true),
+        ),
+        eventOn(
+            tavern_events.MESSAGE_EDITED,
+            (messageId) => scheduleRenderMessage(messageId, true),
+        ),
+        eventOn(
+            tavern_events.MESSAGE_UPDATED,
+            (messageId) => scheduleRenderMessage(messageId, true),
+        ),
     ]
 
     return () => {
+        contentRenderActive = false
+
         listeners.forEach((listener) => listener.stop())
 
-        renderStates.forEach(({ root, contentHost, mount, originalHtml }) => {
-            root.unmount()
+        renderTimers.forEach((timer) => window.clearTimeout(timer))
+        renderTimers.clear()
 
-            if (contentHost.isConnected && mount.parentElement === contentHost) {
-                contentHost.innerHTML = originalHtml
-            }
-        })
-
+        renderStates.forEach((state) => cleanupState(state))
         renderStates.clear()
     }
 }
