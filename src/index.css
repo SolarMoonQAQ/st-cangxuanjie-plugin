@@ -24,7 +24,7 @@
     }
 
     .cx-dialogue-name, .cx-dialogue-name-head {
-        @apply font-dialogue-name text-shadow-md;
+        @apply text-shadow-md;
     }
 
     .cx-dialogue-name {
@@ -38,4 +38,11 @@
     .cx-dialogue-content {
         @apply text-sm;
     }
+}
+
+/* This stylesheet is injected into SillyTavern, whose unlayered rules can
+   otherwise override Tailwind's layered component declarations. */
+.cx-dialogue-name,
+.cx-dialogue-name-head {
+    font-family: var(--dialogue-name-font), cursive !important;
 }
