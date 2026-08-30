@@ -65,12 +65,7 @@
         @apply text-(length:--cx-dialogue-size) text-ink-medium leading-relaxed;
     }
 
-    .cx-dialogue-prefix,
-    .cx-dialogue-suffix {
-        display: none;
-    }
-
-    .cx-dom-slot > :first-child {
+    .cx-dialogue-raw > :first-child {
         margin: 0;
     }
 

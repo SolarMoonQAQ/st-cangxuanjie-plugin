@@ -1,15 +1,13 @@
 import DialogueCard from './DialogueCard'
-import DomSlot from './DomSlot'
 
 export type ContentBlock = {
-    node: Node
+    html: string
     speaker?: string
 }
 
 type ContentRendererProps =
     | {
         blocks: ContentBlock[]
-        contentHost: HTMLElement
     }
     | {
         content: string
@@ -52,7 +50,7 @@ export default function ContentRenderer(props: ContentRendererProps) {
         return <PreviewRenderer content={props.content} />
     }
 
-    const { blocks, contentHost } = props
+    const { blocks } = props
 
     return (
         <div className="cx-bg">
@@ -63,14 +61,21 @@ export default function ContentRenderer(props: ContentRendererProps) {
                             key={index}
                             speaker={block.speaker}
                         >
-                            <DomSlot node={block.node} returnTo={contentHost} />
+                            <div
+                                className="cx-dialogue-raw"
+                                dangerouslySetInnerHTML={{ __html: block.html }}
+                            />
                         </DialogueCard>
                     )
                 }
 
-                return <div key={index} className="cx-narration">
-                    <DomSlot node={block.node} returnTo={contentHost} />
-                </div>
+                return (
+                    <div
+                        key={index}
+                        className="cx-narration"
+                        dangerouslySetInnerHTML={{ __html: block.html }}
+                    />
+                )
             })}
         </div>
     )

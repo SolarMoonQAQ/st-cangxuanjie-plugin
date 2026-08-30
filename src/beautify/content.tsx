@@ -25,7 +25,6 @@ const contentPrompt = {
 `,
 }
 
-//const CONTENT_BLOCK_PATTERN = /<div\b[^>]*data-cx-content[^>]*>([\s\S]*?)<\/div>/i
 const DIALOGUE_PATTERN = /^【([^】\r\n]+)】\s*[：:]\s*[“"]([\s\S]*?)[”"]$/
 const DIALOGUE_OPEN_PATTERN = /^【[^】\r\n]+】\s*[：:]\s*[“"]/
 const DIALOGUE_CLOSE_PATTERN = /[”"]\s*$/
@@ -35,7 +34,7 @@ type RenderState = {
     contentHost: HTMLElement
     mount: HTMLElement
     root: Root
-    blocks: ContentBlock[]
+    originalHtml: string
     observer: MutationObserver
 }
 
@@ -77,6 +76,89 @@ function getContentHost(mesText: HTMLElement): HTMLElement | null {
     return mesText.querySelector<HTMLElement>('[data-cx-content]')
 }
 
+function getMeaningfulNodes(root: HTMLElement): Node[] {
+    return Array.from(root.childNodes).filter((node) => {
+        if (node.nodeType === Node.TEXT_NODE) {
+            return Boolean(node.textContent?.trim())
+        }
+
+        return node.nodeType === Node.ELEMENT_NODE
+    })
+}
+
+function isBlockElement(element: Element): boolean {
+    return [
+        'ADDRESS',
+        'ARTICLE',
+        'ASIDE',
+        'BLOCKQUOTE',
+        'DIV',
+        'DL',
+        'FIELDSET',
+        'FIGURE',
+        'FOOTER',
+        'FORM',
+        'H1',
+        'H2',
+        'H3',
+        'H4',
+        'H5',
+        'H6',
+        'HEADER',
+        'HR',
+        'LI',
+        'MAIN',
+        'NAV',
+        'OL',
+        'P',
+        'PRE',
+        'SECTION',
+        'TABLE',
+        'UL',
+    ].includes(element.tagName)
+}
+
+function getRenderedNodes(contentHost: HTMLElement): Node[] {
+    const source = document.createElement('div')
+    source.innerHTML = contentHost.innerHTML
+
+    const directNodes = getMeaningfulNodes(source)
+
+    if (directNodes.length !== 1) {
+        return directNodes
+    }
+
+    const onlyNode = directNodes[0]
+
+    if (onlyNode.nodeType === Node.TEXT_NODE) {
+        const text = onlyNode.textContent ?? ''
+
+        if (!/\n{2,}/.test(text)) {
+            return directNodes
+        }
+
+        return text
+            .split(/\n{2,}/)
+            .map((part) => part.trim())
+            .filter(Boolean)
+            .map((part) => {
+                const paragraph = document.createElement('p')
+                paragraph.textContent = part
+                return paragraph
+            })
+    }
+
+    if (onlyNode instanceof HTMLElement) {
+        const blockChildren = Array.from(onlyNode.children).filter(isBlockElement)
+
+        if (blockChildren.length > 1) {
+            return blockChildren
+        }
+    }
+
+    return directNodes
+}
+
 function getTextNodes(root: Node): Text[] {
     const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT)
     const nodes: Text[] = []
@@ -88,105 +170,76 @@ function getTextNodes(root: Node): Text[] {
     return nodes
 }
 
-function wrapTextFromStart(root: Node, length: number, className: string) {
+function removeTextFromStart(root: Node, length: number) {
     let remaining = length
 
     for (const textNode of getTextNodes(root)) {
         if (remaining <= 0) break
 
         const count = Math.min(remaining, textNode.data.length)
-        const range = document.createRange()
-
-        range.setStart(textNode, 0)
-        range.setEnd(textNode, count)
-
-        const wrapper = document.createElement('span')
-        wrapper.className = className
-        range.surroundContents(wrapper)
-
+        textNode.deleteData(0, count)
         remaining -= count
     }
 }
 
-function wrapTextFromEnd(root: Node, length: number, className: string) {
+function removeTextFromEnd(root: Node, length: number) {
     let remaining = length
 
     for (const textNode of getTextNodes(root).reverse()) {
         if (remaining <= 0) break
 
         const count = Math.min(remaining, textNode.data.length)
-        const range = document.createRange()
-
-        range.setStart(textNode, textNode.data.length - count)
-        range.setEnd(textNode, textNode.data.length)
-
-        const wrapper = document.createElement('span')
-        wrapper.className = className
-        range.surroundContents(wrapper)
-
+        textNode.deleteData(textNode.data.length - count, count)
         remaining -= count
     }
 }
 
-/**
- * 只隐藏对话前后的格式标记，不重建正文 DOM。
- * 正文中的 <插图>、<img> 等节点仍然保持原节点和原位置。
- */
-function hideDialogueMarkers(node: Node, fullText: string) {
-    if (!(node instanceof HTMLElement)) return
+function escapeHtml(text: string): string {
+    return text
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#039;')
+}
 
-    if (node.querySelector('.cx-dialogue-prefix, .cx-dialogue-suffix')) {
-        return
+function toHtml(node: Node): string {
+    if (node instanceof HTMLElement) {
+        return node.outerHTML
     }
 
-    const leadingLength = fullText.match(/^\s*/)?.[0].length ?? 0
-    const opening = fullText.trim().match(DIALOGUE_OPEN_PATTERN)?.[0]
-    const closing = fullText.match(DIALOGUE_CLOSE_PATTERN)?.[0]
-
-    if (opening) {
-        wrapTextFromStart(
-            node,
-            leadingLength + opening.length,
-            'cx-dialogue-prefix',
-        )
-    }
-
-    if (closing) {
-        wrapTextFromEnd(node, closing.length, 'cx-dialogue-suffix')
-    }
+    return escapeHtml(node.textContent ?? '')
 }
 
 function getContentBlocks(contentHost: HTMLElement): ContentBlock[] {
-    return Array.from(contentHost.childNodes)
-        .filter((node) => {
-            if (node.nodeType === Node.TEXT_NODE) {
-                return Boolean(node.textContent?.trim())
-            }
+    return getRenderedNodes(contentHost).map((node) => {
+        const text = node.textContent ?? ''
+        const match = text.trim().match(DIALOGUE_PATTERN)
 
-            if (
-                node.nodeType === Node.ELEMENT_NODE &&
-                (node as HTMLElement).classList.contains('cx-react-mount')
-            ) {
-                return false
-            }
+        if (!match) {
+            return { html: toHtml(node) }
+        }
 
-            return node.nodeType === Node.ELEMENT_NODE
-        })
-        .map((node) => {
-            const fullText = node.textContent ?? ''
-            const match = fullText.trim().match(DIALOGUE_PATTERN)
+        const clone = node.cloneNode(true)
+        const leadingLength = text.match(/^\s*/)?.[0].length ?? 0
+        const opening = text.trim().match(DIALOGUE_OPEN_PATTERN)?.[0]
+        const closing = text.match(DIALOGUE_CLOSE_PATTERN)?.[0]
 
-            if (!match) {
-                return { node }
-            }
+        if (opening) {
+            removeTextFromStart(clone, leadingLength + opening.length)
+        }
 
-            hideDialogueMarkers(node, fullText)
+        if (closing) {
+            removeTextFromEnd(clone, closing.length)
+        }
 
-            return {
-                node,
-                speaker: match[1].trim(),
-            }
-        })
+        return {
+            html: clone instanceof HTMLElement
+                ? clone.innerHTML
+                : escapeHtml(clone.textContent ?? ''),
+            speaker: match[1].trim(),
+        }
+    })
 }
 
 function cleanupState(state: RenderState) {
@@ -195,9 +248,8 @@ function cleanupState(state: RenderState) {
     state.observer.disconnect()
     state.root.unmount()
 
-    if (shouldRestore) {
-        // DomSlot 的卸载会把节点放回 contentHost，这里再按原顺序整理一次。
-        state.blocks.forEach(({ node }) => state.contentHost.appendChild(node))
+    if (shouldRestore && state.mount.parentElement === state.contentHost) {
+        state.contentHost.innerHTML = state.originalHtml
     }
 
     state.mount.remove()
@@ -231,7 +283,7 @@ function renderMessage(messageId: number) {
 
     const oldState = renderStates.get(messageId)
 
-    // React 不再重复渲染，避免覆盖其他插件刚修改的正文 DOM。
+    // 已经挂载时不重复 render，给其他插件留下修改最终 DOM 的空间。
     if (
         oldState &&
         oldState.mesText === mesText &&
@@ -246,13 +298,14 @@ function renderMessage(messageId: number) {
         cleanupState(oldState)
     }
 
+    const originalHtml = contentHost.innerHTML
     const blocks = getContentBlocks(contentHost)
 
     if (blocks.length === 0) return
 
     const mount = document.createElement('div')
     mount.className = 'cx-react-mount'
-    contentHost.append(mount)
+    contentHost.replaceChildren(mount)
 
     const root = createRoot(mount)
     const observer = new MutationObserver(() => {
@@ -268,16 +321,14 @@ function renderMessage(messageId: number) {
         contentHost,
         mount,
         root,
-        blocks,
+        originalHtml,
         observer,
     }
 
     renderStates.set(messageId, state)
     observer.observe(mesText, { childList: true, subtree: true })
 
-    root.render(
-        <ContentRenderer blocks={blocks} contentHost={contentHost} />,
-    )
+    root.render(<ContentRenderer blocks={blocks} />)
 }
 
 function renderAll() {
