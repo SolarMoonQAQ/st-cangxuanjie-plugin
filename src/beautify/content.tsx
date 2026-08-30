@@ -76,61 +76,67 @@ export function extractContent(messageId: number): string | null {
 
 function renderMessage(messageId: number) {
     const displayed = retrieveDisplayedMessage(messageId)[0] as HTMLElement | undefined
-
     if (!displayed) return
 
     const mesText = displayed.matches('.mes_text')
         ? displayed
         : displayed.querySelector<HTMLElement>('.mes_text')
-
     if (!mesText) return
 
     const content = extractContent(messageId)
-
     if (!content) return
-
-    const contentHost = mesText.querySelector<HTMLElement>('content')
-
-    if (!contentHost) {
-        console.warn(`[苍玄界] 找不到 content 节点，第 ${messageId} 楼跳过渲染`)
-        return
-    }
 
     const oldState = renderStates.get(messageId)
 
+    // 1. 如果已经在当前 DOM 树中成功挂载，直接更新 props，避免重新渲染整棵 DOM
     if (
         oldState &&
         oldState.mesText === mesText &&
         oldState.mount.isConnected &&
-        oldState.mount.parentElement === contentHost
+        mesText.contains(oldState.mount)
     ) {
         oldState.root.render(<ContentRenderer content={content} />)
         return
     }
 
+    // 2. 清理旧状态
     if (oldState) {
         oldState.root.unmount()
         renderStates.delete(messageId)
     }
 
-    const originalHtml = contentHost.innerHTML
+    // 3. 找到原有的 content 标签或残余结构，将其精准替换为挂载容器
+    // 匹配 DOM 中可能存在的 <content...>...</content>（支持多行匹配）
+    const domContentRegex = /<content\b[^>]*>[\s\S]*?<\/content>/i
 
-    const mount = document.createElement('div')
-    mount.className = 'cx-react-mount'
+    // 检查 mesText.innerHTML 中是否包含 <content> 结构
+    if (!domContentRegex.test(mesText.innerHTML)) {
+        // 如果 Markdown 解析器把标签解析为单个游离的 <content>，做一层 fallback
+        const contentHost = mesText.querySelector<HTMLElement>('content')
+        if (!contentHost) {
+            console.warn(`[苍玄界] 找不到 content 节点，第 ${messageId} 楼跳过渲染`)
+            return
+        }
+    }
 
-    /*
-     * 只替换 <content> 内部
-     * 不动 content 外面的 planning、options、progress 等内容
-     */
-    contentHost.replaceChildren(mount)
+    const originalHtml = mesText.innerHTML
+
+    // 将原 HTML 中的 <content>...</content> 整体剔除并替换为挂载占位 div
+    const mountPlaceholderId = `cx-mount-${messageId}-${Date.now()}`
+    mesText.innerHTML = originalHtml.replace(
+        domContentRegex,
+        `<div id="${mountPlaceholderId}" class="cx-react-mount"></div>`,
+    )
+
+    const mount = mesText.querySelector<HTMLElement>(`#${mountPlaceholderId}`)
+    if (!mount) return
 
     const root = createRoot(mount)
-
     root.render(<ContentRenderer content={content} />)
 
     renderStates.set(messageId, {
         mesText,
-        contentHost,
+        contentHost: mount,
         mount,
         root,
         originalHtml,
@@ -143,35 +149,14 @@ function renderAll() {
     }
 }
 
-const pendingRenders = new Map<number, number>()
-
-function scheduleRenderMessage(messageId: number) {
-    const previous = pendingRenders.get(messageId)
-
-    if (previous !== undefined) {
-        cancelAnimationFrame(previous)
-    }
-
-    const frame = requestAnimationFrame(() => {
-        const secondFrame = requestAnimationFrame(() => {
-            pendingRenders.delete(messageId)
-            renderMessage(messageId)
-        })
-
-        pendingRenders.set(messageId, secondFrame)
-    })
-
-    pendingRenders.set(messageId, frame)
-}
-
 export function startContentRender() {
     renderAll()
 
     const listeners = [
-        eventOn(tavern_events.CHAT_CHANGED, () => requestAnimationFrame(renderAll)),
-        eventOn(tavern_events.CHARACTER_MESSAGE_RENDERED, scheduleRenderMessage),
-        eventOn(tavern_events.MESSAGE_EDITED, scheduleRenderMessage),
-        eventOn(tavern_events.MESSAGE_UPDATED, scheduleRenderMessage),
+        eventOn(tavern_events.CHAT_CHANGED, renderAll),
+        eventOn(tavern_events.CHARACTER_MESSAGE_RENDERED, renderMessage),
+        eventOn(tavern_events.MESSAGE_EDITED, renderMessage),
+        eventOn(tavern_events.MESSAGE_UPDATED, renderMessage),
     ]
 
     return () => {

@@ -1,5 +1,4 @@
 import { createRoot, type Root } from 'react-dom/client'
-import App from './App.tsx'
 import pluginCss from './index.css?inline'
 import { injectBeautifyPrompt, startContentRender } from './beautify/content.tsx'
 
@@ -18,7 +17,6 @@ $(() => {
     container = $('<div>').attr('id', CONTAINER_ID).appendTo('body')[0]
 
     root = createRoot(container)
-    root.render(<App />)
 
     toastr.success('苍玄界插件已加载')
 
