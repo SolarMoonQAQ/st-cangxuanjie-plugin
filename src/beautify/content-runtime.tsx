@@ -16,9 +16,13 @@ export const CONTENT_CLOSE_TAG = `</${CONTENT_TAG_NAME}>`
 const MESSAGE_SELECTOR = '.mes_text'
 const renderStates = new Map<HTMLElement, RenderState>()
 
-function preview(value: string | null | undefined, limit = 600) {
+function preview(value: string | null | undefined, limit = 100) {
     const text = value ?? ''
     return text.length > limit ? `${text.slice(0, limit)}…[${text.length - limit} chars]` : text
+}
+
+function isMeaningfulNode(node: Node) {
+    return node.nodeType !== Node.TEXT_NODE || Boolean(node.textContent?.trim())
 }
 
 function describeNode(node: Node, index: number) {
@@ -26,70 +30,141 @@ function describeNode(node: Node, index: number) {
 
     return {
         index,
-        type: node.nodeType,
         name: node.nodeName,
-        className: element?.className || null,
-        text: preview(node.textContent, 180),
-        html: preview(element?.outerHTML, 500),
+        className: preview(element?.className || null, 80),
+        text: preview(node.textContent?.replace(/\s+/g, ' ').trim(), 120),
     }
 }
 
-function getRawMessageSnapshot(messageElement: HTMLElement) {
+function getRawMessageParts(messageElement: HTMLElement) {
     const messageId = Number(messageElement.closest('.mes')?.getAttribute('mesid'))
 
     if (!Number.isInteger(messageId)) return null
 
     try {
         const raw = getChatMessages(messageId)[0]?.message ?? ''
-        const openIndex = raw.search(/<content\b[^>]*>/i)
-        const closeIndex = raw.search(/<\/content\s*>/i)
+        const openMatch = /<content\b[^>]*>/i.exec(raw)
+        const closeMatch = /<\/content\s*>/i.exec(raw)
+
+        if (!openMatch || !closeMatch || closeMatch.index <= openMatch.index) return null
+
+        const contentStart = openMatch.index + openMatch[0].length
+        const suffixStart = closeMatch.index + closeMatch[0].length
 
         return {
             messageId,
-            length: raw.length,
-            openIndex,
-            closeIndex,
-            aroundOpen: preview(
-                openIndex >= 0 ? raw.slice(Math.max(0, openIndex - 100), openIndex + 900) : '',
-                1000,
-            ),
-            aroundClose: preview(
-                closeIndex >= 0 ? raw.slice(Math.max(0, closeIndex - 800), closeIndex + 200) : '',
-                1000,
-            ),
+            content: raw.slice(contentStart, closeMatch.index),
+            suffix: raw.slice(suffixStart),
         }
     } catch {
-        return { messageId, unavailable: true }
+        return null
     }
 }
 
-function logMessageStructure(messageElement: HTMLElement) {
-    const contentElements = Array.from(
-        messageElement.querySelectorAll<HTMLElement>(CONTENT_TAG_NAME),
-    )
+function getDirectMessageChild(node: Node, messageElement: HTMLElement): ChildNode | null {
+    let current: Node | null = node
 
-    logDiagnostic('message-before-render', {
-        raw: getRawMessageSnapshot(messageElement),
-        dom: {
-            childCount: messageElement.childNodes.length,
-            innerHTML: preview(messageElement.innerHTML, 6000),
-            children: Array.from(messageElement.childNodes)
-                .slice(0, 40)
-                .map(describeNode),
-            contentElements: contentElements.map((element) => ({
-                html: preview(element.outerHTML, 1200),
-                childCount: element.childNodes.length,
-                parent: element.parentElement?.tagName ?? null,
-                parentClass: element.parentElement?.className || null,
-                previousSibling: element.previousSibling
-                    ? describeNode(element.previousSibling, -1)
-                    : null,
-                nextSibling: element.nextSibling
-                    ? describeNode(element.nextSibling, -1)
-                    : null,
-            })),
-        },
-    })
+    while (current?.parentNode && current.parentNode !== messageElement) {
+        current = current.parentNode
+    }
+
+    return current?.parentNode === messageElement ? current as ChildNode : null
+}
+
+function getFormattedNodes(text: string, messageId: number, ownerDocument: Document) {
+    const holder = ownerDocument.createElement('div')
+    holder.innerHTML = formatAsDisplayedMessage(text, { message_id: messageId })
+    return Array.from(holder.childNodes).filter(isMeaningfulNode)
+}
+
+function normalizedText(node: Node) {
+    return node.textContent?.replace(/\s+/g, ' ').trim() ?? ''
+}
+
+function nodesMatch(expected: Node, actual: Node) {
+    const expectedText = normalizedText(expected)
+    const actualText = normalizedText(actual)
+
+    if (!expectedText || !actualText) return expected.nodeName === actual.nodeName
+    return expectedText === actualText
+}
+
+function matchFormattedContent(expected: Node[], live: Node[], startIndex: number) {
+    const matchedLiveIndexes: number[] = []
+    let liveIndex = Math.max(0, startIndex)
+
+    for (const expectedNode of expected) {
+        while (liveIndex < live.length && !nodesMatch(expectedNode, live[liveIndex])) {
+            liveIndex += 1
+        }
+
+        if (liveIndex >= live.length) break
+
+        matchedLiveIndexes.push(liveIndex)
+        liveIndex += 1
+    }
+
+    return matchedLiveIndexes
+}
+
+function describeEdge(nodes: Node[], count: number) {
+    if (nodes.length === 0) return []
+
+    const indexes = [
+        ...nodes.slice(0, count).map((_, index) => index),
+        ...nodes.slice(-count).map((_, index) => Math.max(0, nodes.length - count) + index),
+    ]
+
+    return [...new Set(indexes)].map((index) => describeNode(nodes[index], index))
+}
+
+function logBoundaryProbe(messageElement: HTMLElement) {
+    const parts = getRawMessageParts(messageElement)
+    const contentMarker = messageElement.querySelector(CONTENT_TAG_NAME)
+
+    if (!parts || !contentMarker) {
+        logDiagnostic('boundary-probe-unavailable')
+        return
+    }
+
+    const liveNodes = Array.from(messageElement.childNodes).filter(isMeaningfulNode)
+    const startNode = getDirectMessageChild(contentMarker, messageElement)
+    const startIndex = startNode ? liveNodes.indexOf(startNode) : -1
+
+    try {
+        const formattedContentNodes = getFormattedNodes(
+            parts.content,
+            parts.messageId,
+            messageElement.ownerDocument,
+        )
+        const formattedSuffixNodes = getFormattedNodes(
+            parts.suffix,
+            parts.messageId,
+            messageElement.ownerDocument,
+        )
+        const matchedIndexes = matchFormattedContent(
+            formattedContentNodes,
+            liveNodes,
+            startIndex,
+        )
+
+        logDiagnostic('boundary-probe', {
+            messageId: parts.messageId,
+            rawContentLength: parts.content.length,
+            rawSuffixPreview: preview(parts.suffix.trim(), 180),
+            liveNodeCount: liveNodes.length,
+            startIndex,
+            formattedContentNodeCount: formattedContentNodes.length,
+            formattedSuffixNodeCount: formattedSuffixNodes.length,
+            matchedContentNodeCount: matchedIndexes.length,
+            lastMatchedLiveIndex: matchedIndexes.at(-1) ?? null,
+            contentEdges: describeEdge(formattedContentNodes, 2),
+            suffixEdges: describeEdge(formattedSuffixNodes, 2),
+            liveEdges: describeEdge(liveNodes, 4),
+        })
+    } catch {
+        logDiagnostic('boundary-probe-format-failed', { messageId: parts.messageId })
+    }
 }
 
 function renderMessage(messageElement: HTMLElement) {
@@ -102,7 +177,7 @@ function renderMessage(messageElement: HTMLElement) {
         renderStates.delete(messageElement)
     }
 
-    logMessageStructure(messageElement)
+    logBoundaryProbe(messageElement)
 
     const originalChildren = Array.from(messageElement.childNodes)
     const nodes = parseContent(messageElement)

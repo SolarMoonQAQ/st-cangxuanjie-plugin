@@ -10534,64 +10534,99 @@ var Xn = /* @__PURE__ */ o(((e) => {
 	}
 	n(), t.exports = Qn();
 })))(), er = "content", tr = `<${er}>`, nr = `</${er}>`, rr = ".mes_text", ir = /* @__PURE__ */ new Map();
-function ar(e, t = 600) {
+function ar(e, t = 100) {
 	let n = e ?? "";
 	return n.length > t ? `${n.slice(0, t)}…[${n.length - t} chars]` : n;
 }
-function or(e, t) {
+function or(e) {
+	return e.nodeType !== Node.TEXT_NODE || !!e.textContent?.trim();
+}
+function sr(e, t) {
 	let n = e.nodeType === Node.ELEMENT_NODE ? e : null;
 	return {
 		index: t,
-		type: e.nodeType,
 		name: e.nodeName,
-		className: n?.className || null,
-		text: ar(e.textContent, 180),
-		html: ar(n?.outerHTML, 500)
+		className: ar(n?.className || null, 80),
+		text: ar(e.textContent?.replace(/\s+/g, " ").trim(), 120)
 	};
 }
-function sr(e) {
+function cr(e) {
 	let t = Number(e.closest(".mes")?.getAttribute("mesid"));
 	if (!Number.isInteger(t)) return null;
 	try {
-		let e = getChatMessages(t)[0]?.message ?? "", n = e.search(/<content\b[^>]*>/i), r = e.search(/<\/content\s*>/i);
+		let e = getChatMessages(t)[0]?.message ?? "", n = /<content\b[^>]*>/i.exec(e), r = /<\/content\s*>/i.exec(e);
+		if (!n || !r || r.index <= n.index) return null;
+		let i = n.index + n[0].length, a = r.index + r[0].length;
 		return {
 			messageId: t,
-			length: e.length,
-			openIndex: n,
-			closeIndex: r,
-			aroundOpen: ar(n >= 0 ? e.slice(Math.max(0, n - 100), n + 900) : "", 1e3),
-			aroundClose: ar(r >= 0 ? e.slice(Math.max(0, r - 800), r + 200) : "", 1e3)
+			content: e.slice(i, r.index),
+			suffix: e.slice(a)
 		};
 	} catch {
-		return {
-			messageId: t,
-			unavailable: !0
-		};
+		return null;
 	}
 }
-function cr(e) {
-	let t = Array.from(e.querySelectorAll(er));
-	Yn("message-before-render", {
-		raw: sr(e),
-		dom: {
-			childCount: e.childNodes.length,
-			innerHTML: ar(e.innerHTML, 6e3),
-			children: Array.from(e.childNodes).slice(0, 40).map(or),
-			contentElements: t.map((e) => ({
-				html: ar(e.outerHTML, 1200),
-				childCount: e.childNodes.length,
-				parent: e.parentElement?.tagName ?? null,
-				parentClass: e.parentElement?.className || null,
-				previousSibling: e.previousSibling ? or(e.previousSibling, -1) : null,
-				nextSibling: e.nextSibling ? or(e.nextSibling, -1) : null
-			}))
-		}
-	});
+function lr(e, t) {
+	let n = e;
+	for (; n?.parentNode && n.parentNode !== t;) n = n.parentNode;
+	return n?.parentNode === t ? n : null;
 }
-function lr(e) {
+function ur(e, t, n) {
+	let r = n.createElement("div");
+	return r.innerHTML = formatAsDisplayedMessage(e, { message_id: t }), Array.from(r.childNodes).filter(or);
+}
+function dr(e) {
+	return e.textContent?.replace(/\s+/g, " ").trim() ?? "";
+}
+function fr(e, t) {
+	let n = dr(e), r = dr(t);
+	return !n || !r ? e.nodeName === t.nodeName : n === r;
+}
+function pr(e, t, n) {
+	let r = [], i = Math.max(0, n);
+	for (let n of e) {
+		for (; i < t.length && !fr(n, t[i]);) i += 1;
+		if (i >= t.length) break;
+		r.push(i), i += 1;
+	}
+	return r;
+}
+function mr(e, t) {
+	if (e.length === 0) return [];
+	let n = [...e.slice(0, t).map((e, t) => t), ...e.slice(-t).map((n, r) => Math.max(0, e.length - t) + r)];
+	return [...new Set(n)].map((t) => sr(e[t], t));
+}
+function hr(e) {
+	let t = cr(e), n = e.querySelector(er);
+	if (!t || !n) {
+		Yn("boundary-probe-unavailable");
+		return;
+	}
+	let r = Array.from(e.childNodes).filter(or), i = lr(n, e), a = i ? r.indexOf(i) : -1;
+	try {
+		let n = ur(t.content, t.messageId, e.ownerDocument), i = ur(t.suffix, t.messageId, e.ownerDocument), o = pr(n, r, a);
+		Yn("boundary-probe", {
+			messageId: t.messageId,
+			rawContentLength: t.content.length,
+			rawSuffixPreview: ar(t.suffix.trim(), 180),
+			liveNodeCount: r.length,
+			startIndex: a,
+			formattedContentNodeCount: n.length,
+			formattedSuffixNodeCount: i.length,
+			matchedContentNodeCount: o.length,
+			lastMatchedLiveIndex: o.at(-1) ?? null,
+			contentEdges: mr(n, 2),
+			suffixEdges: mr(i, 2),
+			liveEdges: mr(r, 4)
+		});
+	} catch {
+		Yn("boundary-probe-format-failed", { messageId: t.messageId });
+	}
+}
+function gr(e) {
 	let t = ir.get(e);
 	if (t?.mount.isConnected) return;
-	t && (t.stop(), ir.delete(e)), cr(e);
+	t && (t.stop(), ir.delete(e)), hr(e);
 	let n = Array.from(e.childNodes), r = d(e), i = e.ownerDocument.createElement("div");
 	e.replaceChildren(i);
 	let a = (0, $n.createRoot)(i);
@@ -10614,7 +10649,7 @@ function lr(e) {
 		}
 	});
 }
-function ur(e) {
+function _r(e) {
 	if (e.nodeType !== 1) return;
 	let t = e, n = /* @__PURE__ */ new Set();
 	if (t.matches("content")) {
@@ -10624,31 +10659,31 @@ function ur(e) {
 	t.querySelectorAll(er).forEach((e) => {
 		let t = e.closest(rr);
 		t && n.add(t);
-	}), n.forEach(lr);
+	}), n.forEach(gr);
 }
-function dr() {
+function vr() {
 	for (let [e, t] of ir) e.isConnected && t.mount.isConnected || (t.stop(), ir.delete(e));
 }
-function fr() {
+function yr() {
 	let e = window.parent.document;
 	Yn("runtime-start", { markedMessageCount: e.querySelectorAll(`${rr}:has(${er})`).length });
 	let t = new MutationObserver((e) => {
-		for (let t of e) t.addedNodes.forEach(ur);
-		dr();
+		for (let t of e) t.addedNodes.forEach(_r);
+		vr();
 	});
 	return t.observe(e.body, {
 		childList: !0,
 		subtree: !0
 	}), e.querySelectorAll(er).forEach((e) => {
 		let t = e.closest(rr);
-		t && lr(t);
+		t && gr(t);
 	}), () => {
 		Yn("runtime-stop-start", { renderCount: ir.size }), t.disconnect(), ir.forEach(({ stop: e }) => e()), ir.clear(), Yn("runtime-stop-complete");
 	};
 }
 //#endregion
 //#region src/beautify/content-inject.ts
-var pr = {
+var br = {
 	id: "cangxuanjie-content-format",
 	position: "in_chat",
 	depth: 0,
@@ -10669,9 +10704,9 @@ ${tr}
 ${nr}
 `
 };
-function mr() {
+function xr() {
 	let e = null, t = () => {
-		e?.(), e = injectPrompts([pr]).uninject;
+		e?.(), e = injectPrompts([br]).uninject;
 	};
 	t();
 	let n = [eventOn(tavern_events.CHAT_CHANGED, t)];
@@ -10681,51 +10716,51 @@ function mr() {
 }
 //#endregion
 //#region src/main.tsx
-var hr = "cangxuanjie-plugin-style", gr = null, _r = null, vr = null, yr = !1;
-function br() {
+var Sr = "cangxuanjie-plugin-style", Cr = null, wr = null, Tr = null, Er = !1;
+function Dr() {
 	let e = window.parent.document;
-	e.getElementById(hr)?.remove();
+	e.getElementById(Sr)?.remove();
 	let t = e.createElement("style");
-	t.id = hr, t.textContent = l, e.head.appendChild(t), gr = mr(), _r = fr();
+	t.id = Sr, t.textContent = l, e.head.appendChild(t), Cr = xr(), wr = yr();
 	let n = window.frameElement, r = e.defaultView?.MutationObserver;
 	if (n && e.body && r) {
 		let t = new r(() => {
-			n.isConnected || xr("frame-removed");
+			n.isConnected || Or("frame-removed");
 		});
 		t.observe(e.body, {
 			childList: !0,
 			subtree: !0
-		}), vr = () => t.disconnect();
+		}), Tr = () => t.disconnect();
 	}
 	Yn("plugin-initialized", {
 		hasScriptFrame: !!n,
-		frameRemovalObserverInstalled: !!vr
+		frameRemovalObserverInstalled: !!Tr
 	}), toastr.success("苍玄界插件已加载");
 }
 $(() => {
 	try {
-		br();
+		Dr();
 	} catch {
 		toastr.error("苍玄界插件加载失败");
 	}
 });
-function xr(e) {
-	if (yr) return;
-	yr = !0;
+function Or(e) {
+	if (Er) return;
+	Er = !0;
 	let t = window.parent.document;
 	Yn("cleanup-start", {
 		source: e,
 		reactContentCount: t.querySelectorAll(".cx-bg").length,
-		stylePresent: !!t.getElementById(hr)
-	}), vr?.(), vr = null, _r?.(), _r = null, gr?.(), gr = null, t.getElementById(hr)?.remove(), Yn("cleanup-complete", {
+		stylePresent: !!t.getElementById(Sr)
+	}), Tr?.(), Tr = null, wr?.(), wr = null, Cr?.(), Cr = null, t.getElementById(Sr)?.remove(), Yn("cleanup-complete", {
 		source: e,
 		reactContentCount: t.querySelectorAll(".cx-bg").length,
-		stylePresent: !!t.getElementById(hr)
+		stylePresent: !!t.getElementById(Sr)
 	});
 }
 for (let e of [
 	"pagehide",
 	"beforeunload",
 	"unload"
-]) window.addEventListener(e, () => xr(e), { once: !0 });
+]) window.addEventListener(e, () => Or(e), { once: !0 });
 //#endregion
