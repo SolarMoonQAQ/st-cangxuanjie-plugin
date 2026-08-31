@@ -83,6 +83,12 @@
         background-image: url("assets/textures/handmade-paper.png");
     }
 
+    /*修复首段空行（多两个br）*/
+    .cx-bg content > br:first-child,
+    .cx-bg content > br:first-child + br {
+        display: none;
+    }
+
     .cx-narration {
         @apply py-2 text-(length:--cx-body-size) text-ink-heavy leading-relaxed;
     }
