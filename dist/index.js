@@ -10591,73 +10591,162 @@ function sr({ nodes: e, contentHost: t }) {
 }
 //#endregion
 //#region src/beautify/content-runtime.tsx
-var cr = `.mes_text div.${ee}`, lr = /* @__PURE__ */ new Map();
-function ur(e) {
-	if (lr.has(e)) return;
-	let t = hr(e);
-	lr.set(e, t);
-}
+var cr = `.mes_text div.${ee}`, lr = "[苍玄界诊断]", ur = /* @__PURE__ */ new Map();
 function dr(e) {
-	if (e.nodeType !== 1) return;
-	let t = e;
-	t.matches(cr) && ur(t), t.querySelectorAll(cr).forEach(ur);
+	return e instanceof Error ? {
+		name: e.name,
+		message: e.message,
+		stack: e.stack
+	} : { value: String(e) };
 }
-function fr() {
-	for (let [e, t] of lr) e.isConnected || (t(), lr.delete(e));
+function fr(e, t = {}) {
+	console.info(`${lr} ${e} ${JSON.stringify(t)}`);
 }
-function pr(e) {
-	e.querySelectorAll(cr).forEach(ur), fr();
+function pr(e, t, n = {}) {
+	console.error(`${lr} ${e} ${JSON.stringify({
+		...n,
+		error: dr(t)
+	})}`);
 }
 function mr(e) {
+	let t = Array.from(e.querySelectorAll(".mes_text"));
+	return {
+		readyState: e.readyState,
+		hasBody: !!e.body,
+		messageCount: t.length,
+		strictHostCount: e.querySelectorAll(cr).length,
+		looseHostCount: e.querySelectorAll(`.${ee}`).length,
+		contentElementCount: e.querySelectorAll("content").length,
+		literalContentCount: t.filter((e) => e.textContent?.includes("<content")).length,
+		mountCount: e.querySelectorAll(".cx-react-mount").length,
+		reactCount: e.querySelectorAll(".cx-bg").length
+	};
+}
+function hr(e) {
+	if (!ur.has(e)) {
+		fr("host-found", {
+			connected: e.isConnected,
+			childNodeCount: e.childNodes.length,
+			parentClass: e.parentElement?.className
+		});
+		try {
+			let t = br(e);
+			ur.set(e, t);
+		} catch (t) {
+			pr("host-render-failed", t, { connected: e.isConnected });
+		}
+	}
+}
+function gr(e) {
+	if (e.nodeType !== 1) return;
+	let t = e;
+	t.matches(cr) && hr(t), t.querySelectorAll(cr).forEach(hr);
+}
+function _r() {
+	for (let [e, t] of ur) e.isConnected || (t(), ur.delete(e));
+}
+function vr(e, t) {
+	fr(`scan:${t}:before`, mr(e)), e.querySelectorAll(cr).forEach(hr), _r(), fr(`scan:${t}:after`, mr(e));
+}
+function yr(e) {
 	let t = e.defaultView?.MutationObserver;
 	if (!t || !e.body) throw Error("无法观察酒馆聊天页面");
 	let n = new t((e) => {
-		for (let t of e) t.addedNodes.forEach(dr);
-		fr();
+		for (let t of e) t.addedNodes.forEach(gr);
+		_r();
 	});
 	return n.observe(e.body, {
 		childList: !0,
 		subtree: !0
-	}), () => n.disconnect();
+	}), fr("observer-started", mr(e)), () => {
+		n.disconnect(), fr("observer-stopped");
+	};
 }
-function hr(e) {
-	let t = Array.from(e.childNodes), n = ae(e), r = e.ownerDocument.createElement("div");
-	r.className = "cx-react-mount", e.replaceChildren(r);
-	let i = (0, g.createRoot)(r);
-	return i.render(/* @__PURE__ */ (0, N.jsx)(sr, {
+function br(e) {
+	let t = Array.from(e.childNodes), n = ae(e);
+	fr("content-parsed", {
+		nodeCount: n.length,
+		nodeKinds: n.map((e) => e.kind)
+	});
+	let r = e.ownerDocument.createElement("div");
+	r.className = "cx-react-mount", e.replaceChildren(r), fr("mount-created", {
+		connected: r.isConnected,
+		ownerIsParentDocument: r.ownerDocument === window.parent.document
+	});
+	let i = (0, g.createRoot)(r, {
+		onCaughtError(e, t) {
+			pr("react-caught-error", e, { componentStack: t.componentStack });
+		},
+		onUncaughtError(e, t) {
+			pr("react-uncaught-error", e, { componentStack: t.componentStack });
+		},
+		onRecoverableError(e, t) {
+			pr("react-recoverable-error", e, { componentStack: t.componentStack });
+		}
+	});
+	i.render(/* @__PURE__ */ (0, N.jsx)(sr, {
 		nodes: n,
 		contentHost: e
-	})), () => {
+	}));
+	let a = () => {
+		fr("react-commit-check", {
+			connected: r.isConnected,
+			childElementCount: r.childElementCount,
+			hasReactContent: !!r.querySelector(".cx-bg")
+		});
+	}, o = e.ownerDocument.defaultView;
+	return o?.setTimeout(a, 0), o?.setTimeout(a, 250), () => {
 		i.unmount(), e.isConnected && r.parentElement === e && e.replaceChildren(...t);
 	};
 }
-async function gr() {
-	let e = window.parent.document, t = mr(e);
+async function xr() {
+	let e = window.parent.document, t = e.defaultView ?? window, n = [];
+	fr("runtime-start", {
+		iframeDocument: window.document !== e,
+		...mr(e)
+	});
+	let r = yr(e);
 	try {
-		pr(e), await te(), pr(e);
+		vr(e, "initial"), fr("regex-ensure-start"), await te(), fr("regex-ensure-complete"), vr(e, "after-regex");
+		for (let r of [
+			100,
+			1e3,
+			3e3
+		]) n.push(t.setTimeout(() => {
+			vr(e, `delayed-${r}ms`);
+		}, r));
 	} catch (e) {
-		throw t(), e;
+		throw n.forEach((e) => t.clearTimeout(e)), r(), pr("runtime-start-failed", e), e;
 	}
 	return () => {
-		t();
-		for (let [e, t] of lr) t(), lr.delete(e);
+		n.forEach((e) => t.clearTimeout(e)), r();
+		for (let [e, t] of ur) t(), ur.delete(e);
+		fr("runtime-stopped");
 	};
 }
 //#endregion
 //#region src/main.tsx
-var _r = "tavern-cangxuanjie-root", vr = "cangxuanjie-plugin-style", yr = null, br = null, xr = null, Sr = null;
-async function Cr() {
-	$(`#${_r}`).remove(), br = $("<div>").attr("id", _r).appendTo("body")[0], yr = (0, g.createRoot)(br), $(`#${vr}`).remove();
+var Sr = "tavern-cangxuanjie-root", Cr = "cangxuanjie-plugin-style", wr = "[苍玄界诊断]", Tr = null, Er = null, Dr = null, Or = null;
+async function kr() {
+	console.info(`${wr} initialize-start ${JSON.stringify({
+		iframeDocument: window.document !== window.parent.document,
+		documentReadyState: document.readyState,
+		parentDocumentReadyState: window.parent.document.readyState
+	})}`), $(`#${Sr}`).remove(), Er = $("<div>").attr("id", Sr).appendTo("body")[0], Tr = (0, g.createRoot)(Er), $(`#${Cr}`).remove();
 	let e = window.parent.document;
-	e.getElementById(vr)?.remove();
+	e.getElementById(Cr)?.remove();
 	let t = e.createElement("style");
-	t.id = vr, t.textContent = _, e.head.appendChild(t), xr = re(), Sr = await gr(), toastr.success("苍玄界插件已加载");
+	t.id = Cr, t.textContent = _, e.head.appendChild(t), console.info(`${wr} style-injected ${JSON.stringify({
+		connected: t.isConnected,
+		cssLength: _.length,
+		ownerIsParentDocument: t.ownerDocument === e
+	})}`), Dr = re(), console.info(`${wr} prompt-inject-started {}`), Or = await xr(), console.info(`${wr} initialize-complete {}`), toastr.success("苍玄界插件已加载");
 }
 $(() => {
-	Cr().catch((e) => {
-		console.error("[苍玄界插件] 加载失败", e), toastr.error("苍玄界插件加载失败");
+	kr().catch((e) => {
+		console.error(`${wr} initialize-failed`, e), console.error("[苍玄界插件] 加载失败", e), toastr.error("苍玄界插件加载失败");
 	});
 }), $(window).on("pagehide", () => {
-	Sr?.(), Sr = null, xr?.(), xr = null, yr?.unmount(), br?.remove(), yr = null, br = null, ne(), $(`#${vr}`).remove();
+	Or?.(), Or = null, Dr?.(), Dr = null, Tr?.unmount(), Er?.remove(), Tr = null, Er = null, ne(), $(`#${Cr}`).remove();
 });
 //#endregion
