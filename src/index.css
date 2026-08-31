@@ -79,7 +79,7 @@
 
 @layer components {
     .cx-bg {
-        @apply bg-(--cx-paper-color) px-4 py-2 rounded-lg border border-amber-900/15 shadow-md;
+        @apply bg-(--cx-paper-color) p-6 rounded-lg border border-amber-900/15 shadow-md;
         background-image: url("assets/textures/handmade-paper.png");
     }
 
