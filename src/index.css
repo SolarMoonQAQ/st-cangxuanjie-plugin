@@ -79,17 +79,16 @@
 
 @layer components {
     .cx-bg {
-        @apply bg-(--cx-paper-color) p-6 rounded-lg border border-amber-900/15 shadow-md;
+        @apply bg-(--cx-paper-color) px-4 py-2 rounded-lg border border-amber-900/15 shadow-md;
         background-image: url("assets/textures/handmade-paper.png");
-    }
-
-    /*修复首段空行（多两个br）*/
-    .cx-bg content > br:first-child,
-    .cx-bg content > br:first-child + br {
-        display: none;
     }
 
     .cx-narration {
         @apply py-2 text-(length:--cx-body-size) text-ink-heavy leading-relaxed;
+    }
+
+    /* 修复上边距过宽 */
+    .cx-narration > .cx-dom-slot > p {
+        margin-block: 0;
     }
 }
