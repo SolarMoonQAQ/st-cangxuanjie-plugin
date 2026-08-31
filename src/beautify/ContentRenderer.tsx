@@ -1,12 +1,21 @@
 import DialogueCard from './DialogueCard'
+import DomSlot from './DomSlot'
+
+export type ContentBlock = {
+    node: Node
+    speaker?: string
+}
 
 type ContentRendererProps = {
+    blocks: ContentBlock[]
+    contentHost: HTMLElement
+} | {
     content: string
 }
 
 const DIALOGUE_PATTERN = /^【([^】\r\n]+)】\s*[：:]\s*[“"]([\s\S]*?)[”"]$/
 
-export default function ContentRenderer({ content }: ContentRendererProps) {
+function PreviewRenderer({ content }: { content: string }) {
     const blocks = content
         .trim()
         .split(/\n{2,}/)
@@ -19,13 +28,11 @@ export default function ContentRenderer({ content }: ContentRendererProps) {
                 const match = block.match(DIALOGUE_PATTERN)
 
                 if (match) {
-                    const [, speaker, dialogue] = match
-
                     return (
                         <DialogueCard
                             key={index}
-                            speaker={speaker.trim()}
-                            content={dialogue.trim()}
+                            speaker={match[1].trim()}
+                            content={match[2].trim()}
                         />
                     )
                 }
@@ -34,6 +41,34 @@ export default function ContentRenderer({ content }: ContentRendererProps) {
                     <p key={index} className="cx-narration">
                         {block}
                     </p>
+                )
+            })}
+        </div>
+    )
+}
+
+export default function ContentRenderer(props: ContentRendererProps) {
+    if ('content' in props) {
+        return <PreviewRenderer content={props.content} />
+    }
+
+    const { blocks, contentHost } = props
+
+    return (
+        <div className="cx-bg">
+            {blocks.map((block, index) => {
+                if (block.speaker) {
+                    return (
+                        <DialogueCard key={index} speaker={block.speaker}>
+                            <DomSlot node={block.node} returnTo={contentHost} />
+                        </DialogueCard>
+                    )
+                }
+
+                return (
+                    <div key={index} className="cx-narration">
+                        <DomSlot node={block.node} returnTo={contentHost} />
+                    </div>
                 )
             })}
         </div>
