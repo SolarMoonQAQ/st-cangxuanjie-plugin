@@ -10549,7 +10549,35 @@ function ir(e, t) {
 		lineHeight: a.lineHeight
 	};
 }
-function ar(e, t) {
+function ar(e) {
+	if (!e) return null;
+	let t = e.ownerDocument.defaultView;
+	if (!t) return null;
+	let n = e.getBoundingClientRect(), r = t.getComputedStyle(e);
+	return {
+		tag: e.tagName,
+		id: e.id,
+		className: e.className,
+		display: r.display,
+		position: r.position,
+		boxSizing: r.boxSizing,
+		width: r.width,
+		height: r.height,
+		minHeight: r.minHeight,
+		overflow: r.overflow,
+		contain: r.contain,
+		contentVisibility: r.contentVisibility,
+		transform: r.transform,
+		rectTop: rr(n.top),
+		rectBottom: rr(n.bottom),
+		rectHeight: rr(n.height),
+		clientRectCount: e.getClientRects().length,
+		offsetHeight: e.offsetHeight,
+		scrollHeight: e.scrollHeight,
+		childCount: e.children.length
+	};
+}
+function or(e, t) {
 	let n = e.ownerDocument;
 	if (!n.defaultView) return null;
 	let r = n.createTreeWalker(e, 4), i = [], a = r.nextNode();
@@ -10571,7 +10599,7 @@ function ar(e, t) {
 	}
 	return null;
 }
-function or(e, t, n) {
+function sr(e, t, n) {
 	let r = t.querySelector(".cx-bg"), i = e.ownerDocument.defaultView;
 	if (!r || !i || !t.isConnected) return;
 	let a = r.getBoundingClientRect(), o = i.getComputedStyle(r), s = r.firstElementChild, c = r.lastElementChild, l = s?.querySelector(".cx-dom-slot > p") ?? null, u = c?.querySelector(".cx-dom-slot > p") ?? null, d = r.querySelector(Zn), f = d ? Array.from(d.querySelectorAll("br")) : [], p = e.ownerDocument.getElementById(tr);
@@ -10588,8 +10616,8 @@ function or(e, t, n) {
 		lastChild: ir(c, a.top),
 		firstParagraph: ir(l, a.top),
 		lastParagraph: ir(u, a.top),
-		firstText: ar(r, !1),
-		lastText: ar(r, !0),
+		firstText: or(r, !1),
+		lastText: or(r, !0),
 		renderedContentTag: !!d,
 		renderedBreaks: f.map((e) => {
 			let t = e.getBoundingClientRect();
@@ -10600,14 +10628,23 @@ function or(e, t, n) {
 			};
 		}),
 		detachedHostStart: n.innerHTML.slice(0, 240),
+		layoutChain: {
+			root: ar(r),
+			mount: ar(t),
+			message: ar(e)
+		},
+		viewport: {
+			height: i.innerHeight,
+			scrollY: rr(i.scrollY)
+		},
 		pluginStyleLength: p?.textContent?.length ?? 0,
-		pluginStyleHasParagraphReset: p?.textContent?.includes(".cx-narration > .cx-dom-slot > p") ?? !1
+		pluginStyleHasParagraphReset: p?.textContent?.includes("margin-block:0") ?? !1
 	})}`);
 }
-function sr(e) {
+function cr(e) {
 	return e.nodeType !== Node.TEXT_NODE || !!e.textContent?.trim();
 }
-function cr(e) {
+function lr(e) {
 	let t = Number(e.closest(".mes")?.getAttribute("mesid"));
 	if (!Number.isInteger(t)) return null;
 	try {
@@ -10620,44 +10657,44 @@ function cr(e) {
 		return null;
 	}
 }
-function lr(e, t) {
+function ur(e, t) {
 	let n = e;
 	for (; n?.parentNode && n.parentNode !== t;) n = n.parentNode;
 	return n?.parentNode === t ? n : null;
 }
-function ur(e, t, n) {
+function dr(e, t, n) {
 	let r = n.createElement("div");
-	return r.innerHTML = formatAsDisplayedMessage(e, { message_id: t }), Array.from(r.childNodes).filter(sr);
+	return r.innerHTML = formatAsDisplayedMessage(e, { message_id: t }), Array.from(r.childNodes).filter(cr);
 }
-function dr(e) {
+function fr(e) {
 	return e.textContent?.replace(/\s+/g, " ").trim() ?? "";
 }
-function fr(e, t) {
-	let n = dr(e), r = dr(t);
+function pr(e, t) {
+	let n = fr(e), r = fr(t);
 	return !n || !r ? e.nodeName === t.nodeName : n === r;
 }
-function pr(e, t, n) {
+function mr(e, t, n) {
 	let r = [], i = Math.max(0, n);
 	for (let n of e) {
-		for (; i < t.length && !fr(n, t[i]);) i += 1;
+		for (; i < t.length && !pr(n, t[i]);) i += 1;
 		if (i >= t.length) break;
 		r.push(i), i += 1;
 	}
 	return r;
 }
-function mr(e) {
-	let t = cr(e), n = e.querySelector(Zn);
+function hr(e) {
+	let t = lr(e), n = e.querySelector(Zn);
 	if (!t || !n) return null;
-	let r = Array.from(e.childNodes).filter(sr), i = lr(n, e), a = i ? r.indexOf(i) : -1;
+	let r = Array.from(e.childNodes).filter(cr), i = ur(n, e), a = i ? r.indexOf(i) : -1;
 	if (!i || a < 0) return null;
 	let o;
 	try {
-		o = ur(t.content, t.messageId, e.ownerDocument);
+		o = dr(t.content, t.messageId, e.ownerDocument);
 	} catch {
 		return null;
 	}
 	if (o.length === 0) return null;
-	let s = pr(o, r, a);
+	let s = mr(o, r, a);
 	if (s.length !== o.length || s[0] !== a) return null;
 	let c = r[s[s.length - 1]], l = [], u = i;
 	for (; u;) {
@@ -10666,11 +10703,11 @@ function mr(e) {
 	}
 	return null;
 }
-function hr(e) {
+function gr(e) {
 	let t = nr.get(e);
 	if (t?.mount.isConnected) return;
 	t && (t.stop(), nr.delete(e));
-	let n = mr(e);
+	let n = hr(e);
 	if (!n?.length) return;
 	let r = e.ownerDocument, i = r.createElement("div"), a = r.createElement("div");
 	e.insertBefore(a, n[0]), n.forEach((e) => i.appendChild(e));
@@ -10680,7 +10717,7 @@ function hr(e) {
 		contentHost: i
 	})), r.defaultView?.requestAnimationFrame(() => {
 		r.defaultView?.requestAnimationFrame(() => {
-			or(e, a, i);
+			sr(e, a, i);
 		});
 	}), nr.set(e, {
 		mount: a,
@@ -10689,7 +10726,7 @@ function hr(e) {
 		}
 	});
 }
-function gr(e) {
+function _r(e) {
 	if (e.nodeType !== 1) return;
 	let t = e, n = /* @__PURE__ */ new Set();
 	if (t.matches("content")) {
@@ -10699,29 +10736,29 @@ function gr(e) {
 	t.querySelectorAll(Zn).forEach((e) => {
 		let t = e.closest(er);
 		t && n.add(t);
-	}), n.forEach(hr);
-}
-function _r() {
-	for (let [e, t] of nr) e.isConnected && t.mount.isConnected || (t.stop(), nr.delete(e));
+	}), n.forEach(gr);
 }
 function vr() {
+	for (let [e, t] of nr) e.isConnected && t.mount.isConnected || (t.stop(), nr.delete(e));
+}
+function yr() {
 	let e = window.parent.document, t = new MutationObserver((e) => {
-		for (let t of e) t.addedNodes.forEach(gr);
-		_r();
+		for (let t of e) t.addedNodes.forEach(_r);
+		vr();
 	});
 	return t.observe(e.body, {
 		childList: !0,
 		subtree: !0
 	}), e.querySelectorAll(Zn).forEach((e) => {
 		let t = e.closest(er);
-		t && hr(t);
+		t && gr(t);
 	}), () => {
 		t.disconnect(), nr.forEach(({ stop: e }) => e()), nr.clear();
 	};
 }
 //#endregion
 //#region src/beautify/content-inject.ts
-var yr = {
+var br = {
 	id: "cangxuanjie-content-format",
 	position: "in_chat",
 	depth: 0,
@@ -10742,9 +10779,9 @@ ${Qn}
 ${$n}
 `
 };
-function br() {
+function xr() {
 	let e = null, t = () => {
-		e?.(), e = injectPrompts([yr]).uninject;
+		e?.(), e = injectPrompts([br]).uninject;
 	};
 	t();
 	let n = [eventOn(tavern_events.CHAT_CHANGED, t)];
@@ -10754,20 +10791,20 @@ function br() {
 }
 //#endregion
 //#region src/main.tsx
-var xr = "cangxuanjie-plugin-style", Sr = null, Cr = null;
-function wr() {
+var Sr = "cangxuanjie-plugin-style", Cr = null, wr = null;
+function Tr() {
 	let e = window.parent.document;
-	e.getElementById(xr)?.remove();
+	e.getElementById(Sr)?.remove();
 	let t = e.createElement("style");
-	t.id = xr, t.textContent = l, e.head.appendChild(t), Sr = br(), Cr = vr(), toastr.success("苍玄界插件已加载");
+	t.id = Sr, t.textContent = l, e.head.appendChild(t), Cr = xr(), wr = yr(), toastr.success("苍玄界插件已加载");
 }
 $(() => {
 	try {
-		wr();
+		Tr();
 	} catch (e) {
 		console.error("[苍玄界插件] 加载失败", e), toastr.error("苍玄界插件加载失败");
 	}
 }), $(window).on("pagehide", () => {
-	Cr?.(), Cr = null, Sr?.(), Sr = null, window.parent.document.getElementById(xr)?.remove();
+	wr?.(), wr = null, Cr?.(), Cr = null, window.parent.document.getElementById(Sr)?.remove();
 });
 //#endregion

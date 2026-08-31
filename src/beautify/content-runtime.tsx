@@ -49,6 +49,39 @@ function getElementSpacing(element: Element | null, rootTop: number) {
     }
 }
 
+function getLayoutState(element: HTMLElement | null) {
+    if (!element) return null
+
+    const view = element.ownerDocument.defaultView
+    if (!view) return null
+
+    const rect = element.getBoundingClientRect()
+    const style = view.getComputedStyle(element)
+
+    return {
+        tag: element.tagName,
+        id: element.id,
+        className: element.className,
+        display: style.display,
+        position: style.position,
+        boxSizing: style.boxSizing,
+        width: style.width,
+        height: style.height,
+        minHeight: style.minHeight,
+        overflow: style.overflow,
+        contain: style.contain,
+        contentVisibility: style.contentVisibility,
+        transform: style.transform,
+        rectTop: round(rect.top),
+        rectBottom: round(rect.bottom),
+        rectHeight: round(rect.height),
+        clientRectCount: element.getClientRects().length,
+        offsetHeight: element.offsetHeight,
+        scrollHeight: element.scrollHeight,
+        childCount: element.children.length,
+    }
+}
+
 function getTextEdge(root: HTMLElement, fromEnd: boolean) {
     const document = root.ownerDocument
     const view = document.defaultView
@@ -130,9 +163,18 @@ function logSpacing(messageElement: HTMLElement, mount: HTMLElement, contentHost
                 }
             }),
             detachedHostStart: contentHost.innerHTML.slice(0, 240),
+            layoutChain: {
+                root: getLayoutState(root),
+                mount: getLayoutState(mount),
+                message: getLayoutState(messageElement),
+            },
+            viewport: {
+                height: view.innerHeight,
+                scrollY: round(view.scrollY),
+            },
             pluginStyleLength: pluginStyle?.textContent?.length ?? 0,
             pluginStyleHasParagraphReset:
-                pluginStyle?.textContent?.includes('.cx-narration > .cx-dom-slot > p') ?? false,
+                pluginStyle?.textContent?.includes('margin-block:0') ?? false,
         })}`,
     )
 }
