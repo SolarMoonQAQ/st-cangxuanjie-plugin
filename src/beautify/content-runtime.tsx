@@ -9,6 +9,11 @@ const renderStates = new Map<number, StopRender>()
 export const CONTENT_TAG_NAME = 'content'
 export const CONTENT_OPEN_TAG = `<${CONTENT_TAG_NAME}>`
 export const CONTENT_CLOSE_TAG = `</${CONTENT_TAG_NAME}>`
+export const CONTENT_HOST_OPEN_TAG = '<div data-cx-content markdown="1">'
+export const CONTENT_HOST_CLOSE_TAG = '</div>'
+
+const CONTENT_HOST_SELECTOR = 'div[data-cx-content]'
+
 function escapeRegExp(value: string): string {
     return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 }
@@ -30,7 +35,7 @@ function extractRawContent(messageId: number): string | null {
     return match?.[1].trim() ?? null
 }
 
-function findContentHost(messageId: number): HTMLElement | null {
+function findDisplayedMesText(messageId: number): HTMLElement | null {
     const displayed = retrieveDisplayedMessage(messageId)[0] as HTMLElement | undefined
 
     if (!displayed) {
@@ -45,11 +50,33 @@ function findContentHost(messageId: number): HTMLElement | null {
         return null
     }
 
-    if (mesText.matches(CONTENT_TAG_NAME)) {
-        return mesText
+    return mesText
+}
+
+function findContentHost(mesText: HTMLElement): HTMLElement | null {
+    return mesText.querySelector<HTMLElement>(CONTENT_HOST_SELECTOR)
+}
+
+function createLegacyContentHost(messageId: number, mesText: HTMLElement): HTMLElement | null {
+    const message = SillyTavern.chat[messageId]?.mes
+
+    if (typeof message !== 'string') {
+        return null
     }
 
-    return mesText.querySelector<HTMLElement>(CONTENT_TAG_NAME)
+    const normalizedMessage = message.replace(
+        CONTENT_BLOCK_PATTERN,
+        (_block, rawContent: string) =>
+            `${CONTENT_HOST_OPEN_TAG}\n${rawContent.trim()}\n${CONTENT_HOST_CLOSE_TAG}`,
+    )
+    const holder = document.createElement('div')
+
+    holder.innerHTML = formatAsDisplayedMessage(normalizedMessage, {
+        message_id: messageId,
+    })
+    mesText.replaceChildren(...holder.childNodes)
+
+    return findContentHost(mesText)
 }
 
 function stopMessageRender(messageId: number) {
@@ -65,14 +92,20 @@ function renderOneMessage(messageId: number) {
         return
     }
 
-    const contentHost = findContentHost(messageId)
+    const mesText = findDisplayedMesText(messageId)
 
-    if (!contentHost) {
+    if (!mesText) {
         stopMessageRender(messageId)
         return
     }
 
     stopMessageRender(messageId)
+
+    const contentHost = findContentHost(mesText) ?? createLegacyContentHost(messageId, mesText)
+
+    if (!contentHost) {
+        return
+    }
 
     const stop = renderMessage(contentHost)
 

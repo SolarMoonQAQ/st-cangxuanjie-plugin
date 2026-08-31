@@ -10524,49 +10524,58 @@ function Yn({ nodes: e, contentHost: t }) {
 }
 //#endregion
 //#region src/beautify/content-runtime.tsx
-var Xn = /* @__PURE__ */ new Map(), Zn = "content", Qn = `<${Zn}>`, $n = `</${Zn}>`;
-function er(e) {
+var Xn = /* @__PURE__ */ new Map(), Zn = "content", Qn = `<${Zn}>`, $n = `</${Zn}>`, er = "<div data-cx-content markdown=\"1\">", tr = "</div>", nr = "div[data-cx-content]";
+function rr(e) {
 	return e.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
-var tr = er(Zn), nr = new RegExp(String.raw`<${tr}\b[^>]*>([\s\S]*?)</${tr}>`, "i");
-function rr(e) {
-	let t = SillyTavern.chat[e]?.mes;
-	return typeof t == "string" ? t.match(nr)?.[1].trim() ?? null : null;
-}
-function ir(e) {
-	let t = retrieveDisplayedMessage(e)[0];
-	if (!t) return null;
-	let n = t.matches(".mes_text") ? t : t.querySelector(".mes_text");
-	return n ? n.matches("content") ? n : n.querySelector(Zn) : null;
-}
-function ar(e) {
-	Xn.get(e)?.(), Xn.delete(e);
-}
+var ir = rr(Zn), ar = new RegExp(String.raw`<${ir}\b[^>]*>([\s\S]*?)</${ir}>`, "i");
 function or(e) {
-	if (!rr(e)) {
-		ar(e);
-		return;
-	}
-	let t = ir(e);
-	if (!t) {
-		ar(e);
-		return;
-	}
-	ar(e);
-	let n = lr(t);
-	n && Xn.set(e, n);
+	let t = SillyTavern.chat[e]?.mes;
+	return typeof t == "string" ? t.match(ar)?.[1].trim() ?? null : null;
 }
-function sr() {
-	let e = SillyTavern.chat.length;
-	for (let t = 0; t < e; t += 1) or(t);
-	for (let t of Xn.keys()) t >= e && ar(t);
+function sr(e) {
+	let t = retrieveDisplayedMessage(e)[0];
+	return t && (t.matches(".mes_text") ? t : t.querySelector(".mes_text")) || null;
 }
 function cr(e) {
+	return e.querySelector(nr);
+}
+function lr(e, t) {
+	let n = SillyTavern.chat[e]?.mes;
+	if (typeof n != "string") return null;
+	let r = n.replace(ar, (e, t) => `${er}\n${t.trim()}\n${tr}`), i = document.createElement("div");
+	return i.innerHTML = formatAsDisplayedMessage(r, { message_id: e }), t.replaceChildren(...i.childNodes), cr(t);
+}
+function ur(e) {
+	Xn.get(e)?.(), Xn.delete(e);
+}
+function dr(e) {
+	if (!or(e)) {
+		ur(e);
+		return;
+	}
+	let t = sr(e);
+	if (!t) {
+		ur(e);
+		return;
+	}
+	ur(e);
+	let n = cr(t) ?? lr(e, t);
+	if (!n) return;
+	let r = mr(n);
+	r && Xn.set(e, r);
+}
+function fr() {
+	let e = SillyTavern.chat.length;
+	for (let t = 0; t < e; t += 1) dr(t);
+	for (let t of Xn.keys()) t >= e && ur(t);
+}
+function pr(e) {
 	let t = document.createElement("div");
 	return t.replaceChildren(...e.childNodes), t;
 }
-function lr(e) {
-	let t = cr(e), n = Array.from(t.childNodes), r = y(t), i = document.createElement("div");
+function mr(e) {
+	let t = pr(e), n = Array.from(t.childNodes), r = y(t), i = document.createElement("div");
 	i.className = "cx-react-mount", e.appendChild(i);
 	let a = (0, g.createRoot)(i);
 	return a.render(/* @__PURE__ */ (0, M.jsx)(Yn, {
@@ -10576,23 +10585,23 @@ function lr(e) {
 		a.unmount(), i.parentElement === e && e.replaceChildren(...n);
 	};
 }
-function ur() {
-	sr();
+function hr() {
+	fr();
 	let e = [
-		eventOn(tavern_events.CHAT_CHANGED, sr),
-		eventOn(tavern_events.MORE_MESSAGES_LOADED, sr),
-		eventOn(tavern_events.CHARACTER_MESSAGE_RENDERED, or),
-		eventOn(tavern_events.MESSAGE_EDITED, or),
-		eventOn(tavern_events.MESSAGE_UPDATED, or)
+		eventOn(tavern_events.CHAT_CHANGED, fr),
+		eventOn(tavern_events.MORE_MESSAGES_LOADED, fr),
+		eventOn(tavern_events.CHARACTER_MESSAGE_RENDERED, dr),
+		eventOn(tavern_events.MESSAGE_EDITED, dr),
+		eventOn(tavern_events.MESSAGE_UPDATED, dr)
 	];
 	return () => {
 		e.forEach((e) => e.stop());
-		for (let e of Xn.keys()) ar(e);
+		for (let e of Xn.keys()) ur(e);
 	};
 }
 //#endregion
 //#region src/beautify/content-inject.ts
-var dr = {
+var gr = {
 	id: "cangxuanjie-content-format",
 	position: "in_chat",
 	depth: 0,
@@ -10602,20 +10611,23 @@ var dr = {
 输出时必须遵守以下格式：
 
 1. 所有面向用户展示的正文内容，包括旁白、动作、环境描写、角色对话，都必须放在唯一的一对 ${Qn} 和 ${$n} 标签内。
-2. 除了 ${Qn} ... ${$n} 外，不要输出任何正文内容。
-3. 不要遗漏标签，不要嵌套 content 标签。
-4. 不要把标签放进 Markdown 代码块中。
+2. content 标签内必须保留 ${er} 和 ${tr}，正文只能写在这个 div 内。
+3. 除了下面展示的固定结构外，不要输出任何正文内容。
+4. 不要遗漏标签，不要嵌套 content 标签，不要修改 div 的属性。
+5. 不要把标签放进 Markdown 代码块中。
 
-格式示例：
+固定格式：
 
 ${Qn}
+${er}
 这里是完整的正文内容。
+${tr}
 ${$n}
 `
 };
-function fr() {
+function _r() {
 	let e = null, t = () => {
-		e?.(), e = injectPrompts([dr]).uninject;
+		e?.(), e = injectPrompts([gr]).uninject;
 	};
 	t();
 	let n = [eventOn(tavern_events.CHAT_CHANGED, t)];
@@ -10625,10 +10637,10 @@ function fr() {
 }
 //#endregion
 //#region src/main.tsx
-var pr = "tavern-cangxuanjie-root", mr = "cangxuanjie-plugin-style", hr = null, gr = null, _r = null, vr = null;
+var vr = "tavern-cangxuanjie-root", yr = "cangxuanjie-plugin-style", br = null, xr = null, Sr = null, Cr = null;
 $(() => {
-	$(`#${pr}`).remove(), gr = $("<div>").attr("id", pr).appendTo("body")[0], hr = (0, g.createRoot)(gr), toastr.success("苍玄界插件已加载"), $(`#${mr}`).remove(), $("<style>").attr("id", mr).text(_).appendTo("head"), _r = fr(), vr = ur();
+	$(`#${vr}`).remove(), xr = $("<div>").attr("id", vr).appendTo("body")[0], br = (0, g.createRoot)(xr), toastr.success("苍玄界插件已加载"), $(`#${yr}`).remove(), $("<style>").attr("id", yr).text(_).appendTo("head"), Sr = _r(), Cr = hr();
 }), $(window).on("pagehide", () => {
-	hr?.unmount(), gr?.remove(), hr = null, gr = null, $(`#${mr}`).remove(), _r?.(), _r = null, vr?.(), vr = null;
+	br?.unmount(), xr?.remove(), br = null, xr = null, $(`#${yr}`).remove(), Sr?.(), Sr = null, Cr?.(), Cr = null;
 });
 //#endregion

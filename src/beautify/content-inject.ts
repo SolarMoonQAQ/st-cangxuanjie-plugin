@@ -1,5 +1,7 @@
 import {
     CONTENT_CLOSE_TAG,
+    CONTENT_HOST_CLOSE_TAG,
+    CONTENT_HOST_OPEN_TAG,
     CONTENT_OPEN_TAG,
 } from '@/beautify/content-runtime.tsx'
 
@@ -15,14 +17,17 @@ const contentPrompt = {
 输出时必须遵守以下格式：
 
 1. 所有面向用户展示的正文内容，包括旁白、动作、环境描写、角色对话，都必须放在唯一的一对 ${CONTENT_OPEN_TAG} 和 ${CONTENT_CLOSE_TAG} 标签内。
-2. 除了 ${CONTENT_OPEN_TAG} ... ${CONTENT_CLOSE_TAG} 外，不要输出任何正文内容。
-3. 不要遗漏标签，不要嵌套 content 标签。
-4. 不要把标签放进 Markdown 代码块中。
+2. content 标签内必须保留 ${CONTENT_HOST_OPEN_TAG} 和 ${CONTENT_HOST_CLOSE_TAG}，正文只能写在这个 div 内。
+3. 除了下面展示的固定结构外，不要输出任何正文内容。
+4. 不要遗漏标签，不要嵌套 content 标签，不要修改 div 的属性。
+5. 不要把标签放进 Markdown 代码块中。
 
-格式示例：
+固定格式：
 
 ${CONTENT_OPEN_TAG}
+${CONTENT_HOST_OPEN_TAG}
 这里是完整的正文内容。
+${CONTENT_HOST_CLOSE_TAG}
 ${CONTENT_CLOSE_TAG}
 `,
 }
