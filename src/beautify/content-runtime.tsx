@@ -9,8 +9,20 @@ const pendingMessageIds = new Set<number>()
 
 let flushTimer: number | null = null
 
-const CONTENT_BLOCK_PATTERN = /<cx-content\b[^>]*>([\s\S]*?)<\/cx-content>/i
-const CONTENT_SELECTOR = 'cx-content'
+export const CONTENT_TAG_NAME = 'div'
+export const CONTENT_ATTRIBUTE = 'data-cx-content'
+export const CONTENT_SELECTOR = `${CONTENT_TAG_NAME}[${CONTENT_ATTRIBUTE}]`
+export const CONTENT_OPEN_TAG = `<${CONTENT_TAG_NAME} ${CONTENT_ATTRIBUTE}>`
+export const CONTENT_CLOSE_TAG = `</${CONTENT_TAG_NAME}>`
+function escapeRegExp(value: string): string {
+    return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
+const tagName = escapeRegExp(CONTENT_TAG_NAME)
+const attribute = escapeRegExp(CONTENT_ATTRIBUTE)
+export const CONTENT_BLOCK_PATTERN = new RegExp(
+    `<${tagName}\\b[^>]*\\b${attribute}\\b[^>]*>` + `([\\s\\S]*?)` + `<\\/${tagName}>`,
+    'i',
+)
 
 function extractRawContent(messageId: number): string | null {
     const message = SillyTavern.chat[messageId]?.mes
