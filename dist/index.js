@@ -10419,15 +10419,15 @@ function Vn({ text: e = "印" }) {
 		children: e
 	});
 }
-function Hn({ speaker: e, content: t, children: n }) {
-	let r = e.charAt(0), i = e.slice(1), a = Bn(e);
+function Hn({ speaker: e, content: t }) {
+	let n = e.charAt(0), r = e.slice(1), i = Bn(e);
 	return /* @__PURE__ */ (0, M.jsxs)("div", {
 		className: "flex cx-dialogue",
 		children: [
 			/* @__PURE__ */ (0, M.jsxs)(Pn, {
 				className: "h-10 w-10 shrink-0 cx-avatar",
 				children: [/* @__PURE__ */ (0, M.jsx)(Fn, {
-					src: a.avatar,
+					src: i.avatar,
 					alt: `${e}头像`
 				}), /* @__PURE__ */ (0, M.jsx)(In, { children: "👤" })]
 			}),
@@ -10437,7 +10437,7 @@ function Hn({ speaker: e, content: t, children: n }) {
 					className: "flex items-center h-10",
 					children: /* @__PURE__ */ (0, M.jsx)("span", {
 						className: "cx-dialogue-name-head",
-						children: r
+						children: n
 					})
 				}), /* @__PURE__ */ (0, M.jsx)(Ln, {
 					orientation: "vertical",
@@ -10450,11 +10450,11 @@ function Hn({ speaker: e, content: t, children: n }) {
 					className: "flex items-center h-10",
 					children: /* @__PURE__ */ (0, M.jsx)("span", {
 						className: "cx-dialogue-name",
-						children: i
+						children: r
 					})
 				}), /* @__PURE__ */ (0, M.jsxs)("div", {
 					className: "cx-dialogue-content",
-					children: [/* @__PURE__ */ (0, M.jsx)("span", { children: /* @__PURE__ */ (0, M.jsx)(Vn, { text: r }) }), n ?? t]
+					children: [/* @__PURE__ */ (0, M.jsx)("span", { children: /* @__PURE__ */ (0, M.jsx)(Vn, { text: n }) }), t]
 				})]
 			})
 		]
@@ -10498,13 +10498,7 @@ function Kn(e) {
 	let { blocks: t, contentHost: n } = e;
 	return /* @__PURE__ */ (0, M.jsx)("div", {
 		className: "cx-bg",
-		children: t.map((e, t) => e.speaker ? /* @__PURE__ */ (0, M.jsx)(Hn, {
-			speaker: e.speaker,
-			children: /* @__PURE__ */ (0, M.jsx)(Un, {
-				node: e.node,
-				returnTo: n
-			})
-		}, t) : /* @__PURE__ */ (0, M.jsx)("div", {
+		children: t.map((e, t) => e.speaker ? /* @__PURE__ */ (0, M.jsx)(Hn, { speaker: e.speaker }, t) : /* @__PURE__ */ (0, M.jsx)("div", {
 			className: "cx-narration",
 			children: /* @__PURE__ */ (0, M.jsx)(Un, {
 				node: e.node,

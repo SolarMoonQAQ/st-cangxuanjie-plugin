@@ -60,7 +60,6 @@ export default function ContentRenderer(props: ContentRendererProps) {
                 if (block.speaker) {
                     return (
                         <DialogueCard key={index} speaker={block.speaker}>
-                            <DomSlot node={block.node} returnTo={contentHost} />
                         </DialogueCard>
                     )
                 }

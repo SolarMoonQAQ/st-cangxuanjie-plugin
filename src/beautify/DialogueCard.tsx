@@ -1,12 +1,10 @@
 import { Avatar, AvatarFallback, AvatarImage } from '@/shared/components/ui/avatar.tsx'
 import { Separator } from '@base-ui/react'
-import type { ReactNode } from 'react'
 import { getSpeakerProfile } from '../common/speakerProfiles.ts'
 
 type DialogueProps = {
     speaker: string
     content?: string
-    children?: ReactNode
 }
 
 export function YinSeal({ text = '印' }: { text?: string }) {
@@ -20,7 +18,7 @@ export function YinSeal({ text = '印' }: { text?: string }) {
     )
 }
 
-export default function DialogueCard({ speaker, content, children }: DialogueProps) {
+export default function DialogueCard({ speaker, content }: DialogueProps) {
     const nameHead = speaker.charAt(0)
     const nameTail = speaker.slice(1)
     const profile = getSpeakerProfile(speaker)
@@ -49,7 +47,7 @@ export default function DialogueCard({ speaker, content, children }: DialoguePro
                     <span>
                         <YinSeal text={nameHead}></YinSeal>
                     </span>
-                    {children ?? content}
+                    {content}
                 </div>
             </div>
         </div>
