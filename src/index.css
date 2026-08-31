@@ -86,15 +86,4 @@
     .cx-narration {
         @apply py-2 text-(length:--cx-body-size) text-ink-heavy leading-relaxed;
     }
-
-    /*修复首段空行（）*/
-    .cx-bg content > br:first-child,
-    .cx-bg content > br:first-child + br {
-        display: none;
-    }
-
-    /* 修复上边距过宽 */
-    .cx-narration > .cx-dom-slot > p {
-        margin-block: 0;
-    }
 }

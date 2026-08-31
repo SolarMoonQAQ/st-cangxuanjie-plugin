@@ -18,7 +18,124 @@ export const CONTENT_OPEN_TAG = `<${CONTENT_TAG_NAME}>`
 export const CONTENT_CLOSE_TAG = `</${CONTENT_TAG_NAME}>`
 
 const MESSAGE_SELECTOR = '.mes_text'
+const STYLE_ID = 'cangxuanjie-plugin-style'
 const renderStates = new Map<HTMLElement, RenderState>()
+
+function round(value: number) {
+    return Math.round(value * 100) / 100
+}
+
+function getElementSpacing(element: Element | null, rootTop: number) {
+    if (!element || element.nodeType !== 1) return null
+
+    const view = element.ownerDocument.defaultView
+    if (!view) return null
+
+    const htmlElement = element as HTMLElement
+    const rect = htmlElement.getBoundingClientRect()
+    const style = view.getComputedStyle(htmlElement)
+
+    return {
+        tag: element.tagName,
+        className: element.className,
+        topFromRoot: round(rect.top - rootTop),
+        bottomFromRoot: round(rect.bottom - rootTop),
+        height: round(rect.height),
+        marginTop: style.marginTop,
+        marginBottom: style.marginBottom,
+        paddingTop: style.paddingTop,
+        paddingBottom: style.paddingBottom,
+        lineHeight: style.lineHeight,
+    }
+}
+
+function getTextEdge(root: HTMLElement, fromEnd: boolean) {
+    const document = root.ownerDocument
+    const view = document.defaultView
+    if (!view) return null
+
+    const walker = document.createTreeWalker(root, 4)
+    const textNodes: Text[] = []
+    let current = walker.nextNode()
+
+    while (current) {
+        if (current.textContent?.trim()) textNodes.push(current as Text)
+        current = walker.nextNode()
+    }
+
+    const candidates = fromEnd ? textNodes.reverse() : textNodes
+
+    for (const textNode of candidates) {
+        const text = textNode.textContent ?? ''
+        const offset = fromEnd ? text.search(/\S(?=\s*$)/) : text.search(/\S/)
+        if (offset < 0) continue
+
+        const range = document.createRange()
+        range.setStart(textNode, offset)
+        range.setEnd(textNode, offset + 1)
+        const rect = range.getBoundingClientRect()
+
+        if (rect.width === 0 && rect.height === 0) continue
+
+        const rootRect = root.getBoundingClientRect()
+        return {
+            text: text.slice(offset, offset + 12),
+            topFromRoot: round(rect.top - rootRect.top),
+            bottomFromRoot: round(rect.bottom - rootRect.top),
+        }
+    }
+
+    return null
+}
+
+function logSpacing(messageElement: HTMLElement, mount: HTMLElement, contentHost: HTMLElement) {
+    const root = mount.querySelector<HTMLElement>('.cx-bg')
+    const view = messageElement.ownerDocument.defaultView
+
+    if (!root || !view || !mount.isConnected) return
+
+    const rootRect = root.getBoundingClientRect()
+    const rootStyle = view.getComputedStyle(root)
+    const firstChild = root.firstElementChild
+    const lastChild = root.lastElementChild
+    const firstParagraph = firstChild?.querySelector('.cx-dom-slot > p') ?? null
+    const lastParagraph = lastChild?.querySelector('.cx-dom-slot > p') ?? null
+    const renderedContent = root.querySelector(CONTENT_TAG_NAME)
+    const breaks = renderedContent ? Array.from(renderedContent.querySelectorAll('br')) : []
+    const pluginStyle = messageElement.ownerDocument.getElementById(STYLE_ID)
+
+    console.info(
+        `[苍玄界间距] ${JSON.stringify({
+            messageId: messageElement.closest('.mes')?.getAttribute('mesid') ?? null,
+            root: {
+                height: round(rootRect.height),
+                paddingTop: rootStyle.paddingTop,
+                paddingBottom: rootStyle.paddingBottom,
+                borderTop: rootStyle.borderTopWidth,
+                borderBottom: rootStyle.borderBottomWidth,
+            },
+            firstChild: getElementSpacing(firstChild, rootRect.top),
+            lastChild: getElementSpacing(lastChild, rootRect.top),
+            firstParagraph: getElementSpacing(firstParagraph, rootRect.top),
+            lastParagraph: getElementSpacing(lastParagraph, rootRect.top),
+            firstText: getTextEdge(root, false),
+            lastText: getTextEdge(root, true),
+            renderedContentTag: Boolean(renderedContent),
+            renderedBreaks: breaks.map((element) => {
+                const rect = element.getBoundingClientRect()
+                return {
+                    display: view.getComputedStyle(element).display,
+                    topFromRoot: round(rect.top - rootRect.top),
+                    height: round(rect.height),
+                }
+            }),
+            detachedHostStart: contentHost.innerHTML.slice(0, 240),
+            pluginStyleLength: pluginStyle?.textContent?.length ?? 0,
+            pluginStyleHasParagraphReset:
+                pluginStyle?.textContent?.includes('.cx-narration > .cx-dom-slot > p') ?? false,
+        })}`,
+    )
+}
 
 function isMeaningfulNode(node: Node) {
     return node.nodeType !== Node.TEXT_NODE || Boolean(node.textContent?.trim())
@@ -164,6 +281,12 @@ function renderMessage(messageElement: HTMLElement) {
 
     const root = createRoot(mount)
     root.render(<Content nodes={parseContent(contentHost)} contentHost={contentHost} />)
+
+    ownerDocument.defaultView?.requestAnimationFrame(() => {
+        ownerDocument.defaultView?.requestAnimationFrame(() => {
+            logSpacing(messageElement, mount, contentHost)
+        })
+    })
 
     const stop = () => {
         root.unmount()
