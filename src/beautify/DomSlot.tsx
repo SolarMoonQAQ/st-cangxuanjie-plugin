@@ -22,11 +22,8 @@ export default function DomSlot({ node, returnTo }: DomSlotProps) {
         return () => {
             if (node.parentNode !== slot) return
 
-            if (returnTo.isConnected) {
-                returnTo.appendChild(node)
-            } else {
-                node.parentNode?.removeChild(node)
-            }
+            // returnTo 可以是离屏容器；始终归还原节点，保留其身份和事件。
+            returnTo.appendChild(node)
         }
     }, [node, returnTo])
 
