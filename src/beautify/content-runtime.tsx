@@ -5,10 +5,6 @@ import Content from '@/beautify/Content.tsx'
 type StopRender = () => void
 
 const renderStates = new Map<number, StopRender>()
-const pendingMessageIds = new Set<number>()
-
-let flushTimer: number | null = null
-let flushFrame: number | null = null
 
 export const CONTENT_TAG_NAME = 'content'
 export const CONTENT_OPEN_TAG = `<${CONTENT_TAG_NAME}>`
@@ -34,7 +30,7 @@ function extractRawContent(messageId: number): string | null {
     return match?.[1].trim() ?? null
 }
 
-function findDisplayedMesText(messageId: number): HTMLElement | null {
+function findContentHost(messageId: number): HTMLElement | null {
     const displayed = retrieveDisplayedMessage(messageId)[0] as HTMLElement | undefined
 
     if (!displayed) {
@@ -49,7 +45,11 @@ function findDisplayedMesText(messageId: number): HTMLElement | null {
         return null
     }
 
-    return mesText
+    if (mesText.matches(CONTENT_TAG_NAME)) {
+        return mesText
+    }
+
+    return mesText.querySelector<HTMLElement>(CONTENT_TAG_NAME)
 }
 
 function stopMessageRender(messageId: number) {
@@ -65,7 +65,7 @@ function renderOneMessage(messageId: number) {
         return
     }
 
-    const contentHost = findDisplayedMesText(messageId)
+    const contentHost = findContentHost(messageId)
 
     if (!contentHost) {
         stopMessageRender(messageId)
@@ -95,66 +95,14 @@ function renderAllMessages() {
     }
 }
 
-function flushPendingMessages() {
-    flushFrame = null
-
-    const messageIds = [...pendingMessageIds]
-    pendingMessageIds.clear()
-
-    for (const messageId of messageIds) {
-        renderOneMessage(messageId)
-    }
-}
-
-function scheduleFlush() {
-    if (flushTimer !== null || flushFrame !== null) {
-        return
-    }
-
-    flushTimer = window.setTimeout(() => {
-        flushTimer = null
-        flushFrame = window.requestAnimationFrame(flushPendingMessages)
-    }, 0)
-}
-
-function scheduleMessageRender(messageId: number) {
-    pendingMessageIds.add(messageId)
-    scheduleFlush()
-}
-
-function scheduleAllMessagesRender() {
-    const chatLength = SillyTavern.chat.length
-
-    pendingMessageIds.clear()
-
-    for (let messageId = 0; messageId < chatLength; messageId += 1) {
-        pendingMessageIds.add(messageId)
-    }
-
-    for (const messageId of renderStates.keys()) {
-        if (messageId >= chatLength) {
-            stopMessageRender(messageId)
-        }
-    }
-
-    scheduleFlush()
-}
-
 /**
- * `<content>` 只作为原始消息中的格式标记。酒馆会把未知标签周围的
- * Markdown 段落拆开，因此实际渲染时接管整个 `.mes_text`，并在脱离
- * 页面后移除标记本身，保留酒馆正则已经生成的真实 DOM 节点。
+ * 移动 `<content>` 内由酒馆和其他正则生成的真实 DOM 节点。
+ * `<content>` 外的内容继续留给酒馆原样渲染。
  */
 function createRenderedSource(contentHost: HTMLElement) {
     const holder = document.createElement('div')
 
     holder.replaceChildren(...contentHost.childNodes)
-
-    const markers = Array.from(holder.querySelectorAll(CONTENT_TAG_NAME))
-
-    for (const marker of markers) {
-        marker.replaceWith(...marker.childNodes)
-    }
 
     return holder
 }
@@ -187,28 +135,15 @@ export function startContentRender() {
     renderAllMessages()
 
     const listeners = [
-        eventOn(tavern_events.CHAT_CHANGED, scheduleAllMessagesRender),
-        eventOn(tavern_events.MORE_MESSAGES_LOADED, scheduleAllMessagesRender),
-        eventOn(tavern_events.CHARACTER_MESSAGE_RENDERED, scheduleMessageRender),
-        eventOn(tavern_events.MESSAGE_EDITED, scheduleMessageRender),
-        eventOn(tavern_events.MESSAGE_UPDATED, scheduleMessageRender),
-        eventOn(tavern_events.MESSAGE_DELETED, scheduleAllMessagesRender),
+        eventOn(tavern_events.CHAT_CHANGED, renderAllMessages),
+        eventOn(tavern_events.MORE_MESSAGES_LOADED, renderAllMessages),
+        eventOn(tavern_events.CHARACTER_MESSAGE_RENDERED, renderOneMessage),
+        eventOn(tavern_events.MESSAGE_EDITED, renderOneMessage),
+        eventOn(tavern_events.MESSAGE_UPDATED, renderOneMessage),
     ]
 
     return () => {
         listeners.forEach((listener) => listener.stop())
-
-        if (flushTimer !== null) {
-            window.clearTimeout(flushTimer)
-            flushTimer = null
-        }
-
-        if (flushFrame !== null) {
-            window.cancelAnimationFrame(flushFrame)
-            flushFrame = null
-        }
-
-        pendingMessageIds.clear()
 
         for (const messageId of renderStates.keys()) {
             stopMessageRender(messageId)
