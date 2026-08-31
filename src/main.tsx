@@ -12,7 +12,7 @@ let container: HTMLElement | null = null
 let stopInjectBeautifyPrompt: (() => void) | null = null
 let stopContentRender: (() => void) | null = null
 
-$(() => {
+$(async () => {
     $(`#${CONTAINER_ID}`).remove()
 
     container = $('<div>').attr('id', CONTAINER_ID).appendTo('body')[0]
@@ -25,7 +25,7 @@ $(() => {
     $('<style>').attr('id', STYLE_ID).text(pluginCss).appendTo('head')
 
     stopInjectBeautifyPrompt = injectBeautifyPrompt()
-    stopContentRender = startContentRender()
+    stopContentRender = await startContentRender()
 })
 
 $(window).on('pagehide', () => {

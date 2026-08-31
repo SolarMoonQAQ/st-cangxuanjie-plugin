@@ -9,35 +9,61 @@ const renderStates = new Map<number, StopRender>()
 export const CONTENT_TAG_NAME = 'content'
 export const CONTENT_OPEN_TAG = `<${CONTENT_TAG_NAME}>`
 export const CONTENT_CLOSE_TAG = `</${CONTENT_TAG_NAME}>`
-function escapeRegExp(value: string): string {
-    return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+
+const contentDisplayRegex: TavernRegex = {
+    id: 'cangxuanjie-content-host',
+    script_name: '苍玄界-正文容器',
+    enabled: true,
+
+    find_regex: '/<content\\b[^>]*>([\\s\\S]*?)<\\/content>/gi',
+    replace_string: '<div class="cx-content-host" markdown="1">$1</div>',
+
+    trim_strings: [],
+
+    source: {
+        user_input: false,
+        ai_output: true,
+        slash_command: false,
+        world_info: false,
+        reasoning: false,
+    },
+
+    destination: {
+        display: true,
+        prompt: false,
+    },
+
+    run_on_edit: true,
+    min_depth: null,
+    max_depth: null,
 }
-const tagName = escapeRegExp(CONTENT_TAG_NAME)
-export const CONTENT_BLOCK_PATTERN = new RegExp(
-    String.raw`<${tagName}\b[^>]*>([\s\S]*?)</${tagName}>`,
-    'i',
-)
 
-function extractRawContent(messageId: number): string | null {
-    const message = SillyTavern.chat[messageId]?.mes
+const CONTENT_REGEX_SCOPE = {
+    type: 'character',
+    name: 'current',
+} as const
 
-    if (typeof message !== 'string') {
-        return null
+async function ensureContentDisplayRegex() {
+    const regexes = getTavernRegexes(CONTENT_REGEX_SCOPE)
+    const existing = regexes.find((regex) => regex.id === contentDisplayRegex.id)
+
+    if (
+        existing?.enabled &&
+        existing.find_regex === contentDisplayRegex.find_regex &&
+        existing.replace_string === contentDisplayRegex.replace_string &&
+        existing.destination.display &&
+        !existing.destination.prompt
+    ) {
+        return
     }
 
-    const match = message.match(CONTENT_BLOCK_PATTERN)
-
-    return match?.[1].trim() ?? null
-}
-
-function createFormattedHolder(rawContent: string, messageId: number): HTMLDivElement {
-    const holder = document.createElement('div')
-
-    holder.innerHTML = formatAsDisplayedMessage(rawContent, {
-        message_id: messageId,
-    })
-
-    return holder
+    await updateTavernRegexesWith(
+        (current) => [
+            ...current.filter((regex) => regex.id !== contentDisplayRegex.id),
+            contentDisplayRegex,
+        ],
+        CONTENT_REGEX_SCOPE,
+    )
 }
 
 function findContentHost(messageId: number): HTMLElement | null {
@@ -45,9 +71,11 @@ function findContentHost(messageId: number): HTMLElement | null {
 
     if (!displayed) return null
 
-    return displayed.matches('.mes_text')
+    const mesText = displayed.matches('.mes_text')
         ? displayed
         : displayed.querySelector<HTMLElement>('.mes_text')
+
+    return mesText?.querySelector<HTMLElement>('.cx-content-host') ?? null
 }
 
 function stopMessageRender(messageId: number) {
@@ -64,7 +92,7 @@ function renderOneMessage(messageId: number) {
 
     stopMessageRender(messageId)
 
-    const stop = renderMessage(messageId, contentHost)
+    const stop = renderMessage(contentHost)
 
     if (stop) {
         renderStates.set(messageId, stop)
@@ -85,18 +113,10 @@ function renderAllMessages() {
     }
 }
 
-function renderMessage(messageId: number, contentHost: HTMLElement) {
-    const rawContent = extractRawContent(messageId)
+function renderMessage(contentHost: HTMLElement) {
+    const originalChildren = Array.from(contentHost.childNodes)
 
-    if (!rawContent) {
-        return
-    }
-
-    const holder = createFormattedHolder(rawContent, messageId)
-
-    const nodes = parseContent(holder)
-
-    const originalHtml = contentHost.innerHTML
+    const nodes = parseContent(contentHost)
 
     const mount = document.createElement('div')
     mount.className = 'cx-react-mount'
@@ -111,12 +131,14 @@ function renderMessage(messageId: number, contentHost: HTMLElement) {
         root.unmount()
 
         if (contentHost.isConnected && mount.parentElement === contentHost) {
-            contentHost.innerHTML = originalHtml
+            contentHost.replaceChildren(...originalChildren)
         }
     }
 }
 
-export function startContentRender() {
+export async function startContentRender() {
+    await ensureContentDisplayRegex()
+
     renderAllMessages()
 
     const listeners = [
