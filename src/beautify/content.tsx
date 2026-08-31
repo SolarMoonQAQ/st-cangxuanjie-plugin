@@ -1,5 +1,5 @@
 import { createRoot, type Root } from 'react-dom/client'
-import ContentRenderer from './ContentRenderer'
+import DialogueCard from './DialogueCard'
 
 const CONTENT_PROMPT_ID = 'cangxuanjie-content-format'
 
@@ -30,8 +30,9 @@ const CONTENT_BLOCK_PATTERN = /<div\b[^>]*data-cx-content[^>]*>([\s\S]*?)<\/div>
 type RenderState = {
     mesText: HTMLElement
     contentHost: HTMLElement
-    mount: HTMLElement
-    root: Root
+    mounts: HTMLElement[]
+    roots: Root[]
+    dialogues: Array<{ speaker: string; content: string }>
     originalHtml: string
 }
 
@@ -48,17 +49,9 @@ type PendingRender = {
 // events for the same message.
 const pendingRenders = new Map<number, PendingRender>()
 const preservedContentHosts = new Set<HTMLElement>()
+const styledContentHosts = new Set<HTMLElement>()
 
-function hasThirdPartyRenderedNodes(contentHost: HTMLElement) {
-    // Plain message formatting normally leaves paragraphs and line breaks.
-    // Any other element may belong to a regex/frontend extension (for
-    // example an <inner> replacement), so React must leave this subtree alone.
-    return Array.from(contentHost.querySelectorAll('*')).some((element) => {
-        if (element.closest('.cx-react-mount')) return false
-
-        return element.tagName !== 'P' && element.tagName !== 'BR'
-    })
-}
+const DIALOGUE_PATTERN = /^【([^】\r\n]+)】\s*[：:]\s*[“"]([\s\S]*?)[”"]$/
 
 export function injectBeautifyPrompt() {
     let uninject: (() => void) | null = null
@@ -119,49 +112,117 @@ function renderMessage(messageId: number) {
         return
     }
 
-    if (hasThirdPartyRenderedNodes(contentHost)) {
-        contentHost.classList.add('cx-bg')
-        preservedContentHosts.add(contentHost)
-        console.info(`[苍玄界] 第 ${messageId} 楼包含其他插件生成的节点，保留原始渲染结果`)
-        return
-    }
+    contentHost.classList.add('cx-bg')
+    styledContentHosts.add(contentHost)
 
     const oldState = renderStates.get(messageId)
+
+    const dialogues = content
+        .split(/\n{2,}/)
+        .map((block) => block.trim())
+        .map((block) => {
+            const match = block.match(DIALOGUE_PATTERN)
+
+            return match
+                ? { speaker: match[1].trim(), content: match[2].trim() }
+                : null
+        })
+        .filter((dialogue): dialogue is { speaker: string; content: string } => dialogue !== null)
 
     if (
         oldState &&
         oldState.mesText === mesText &&
-        oldState.mount.isConnected &&
-        oldState.mount.parentElement === contentHost
+        oldState.mounts.length > 0 &&
+        oldState.mounts.every(
+            (mount) => mount.isConnected && mount.parentElement === contentHost,
+        )
     ) {
-        oldState.root.render(<ContentRenderer content={content} />)
         return
     }
 
     if (oldState) {
-        oldState.root.unmount()
+        oldState.roots.forEach((root) => root.unmount())
         renderStates.delete(messageId)
     }
 
     const originalHtml = contentHost.innerHTML
 
-    const mount = document.createElement('div')
-    mount.className = 'cx-react-mount'
+    const mounts: HTMLElement[] = []
+    const roots: Root[] = []
+    let dialogueIndex = 0
 
-    /*
-     * 只替换 <content> 内部
-     */
-    contentHost.replaceChildren(mount)
+    // Only replace plain dialogue paragraphs. Nodes inserted by other regex
+    // extensions (such as <inner>) stay in the DOM and keep their own state.
+    const mountDialogue = () => {
+        const dialogue = dialogues[dialogueIndex++]
 
-    const root = createRoot(mount)
+        if (!dialogue) return null
 
-    root.render(<ContentRenderer content={content} />)
+        const mount = document.createElement('div')
+        mount.className = 'cx-react-mount'
+
+        const root = createRoot(mount)
+        root.render(<DialogueCard speaker={dialogue.speaker} content={dialogue.content} />)
+
+        mounts.push(mount)
+        roots.push(root)
+
+        return mount
+    }
+
+    Array.from(contentHost.childNodes).forEach((node) => {
+        if (node.nodeType === Node.TEXT_NODE) {
+            const text = node.textContent ?? ''
+            const fragment = document.createDocumentFragment()
+
+            text.split(/\n{2,}/).forEach((block) => {
+                const trimmed = block.trim()
+
+                if (!trimmed) return
+
+                const match = trimmed.match(DIALOGUE_PATTERN)
+                const mount = match ? mountDialogue() : null
+
+                if (mount) {
+                    fragment.append(mount)
+                } else {
+                    const paragraph = document.createElement('p')
+                    paragraph.className = 'cx-narration'
+                    paragraph.textContent = trimmed
+                    fragment.append(paragraph)
+                }
+            })
+
+            node.replaceWith(fragment)
+            return
+        }
+
+        if (!(node instanceof HTMLElement)) return
+
+        const text = node.textContent?.trim() ?? ''
+        const match = text.match(DIALOGUE_PATTERN)
+        const hasNestedForeignNode = Array.from(node.children).some(
+            (child) => child.tagName !== 'BR',
+        )
+
+        if (!match || hasNestedForeignNode) {
+            if (match) dialogueIndex++
+
+            if (text) node.classList.add('cx-narration')
+            return
+        }
+
+        const mount = mountDialogue()
+
+        if (mount) node.replaceWith(mount)
+    })
 
     renderStates.set(messageId, {
         mesText,
         contentHost,
-        mount,
-        root,
+        mounts,
+        roots,
+        dialogues,
         originalHtml,
     })
 }
@@ -220,15 +281,16 @@ export function startContentRender() {
         })
         pendingRenders.clear()
 
-        preservedContentHosts.forEach((contentHost) => {
+        styledContentHosts.forEach((contentHost) => {
             contentHost.classList.remove('cx-bg')
         })
+        styledContentHosts.clear()
         preservedContentHosts.clear()
 
-        renderStates.forEach(({ root, contentHost, mount, originalHtml }) => {
-            root.unmount()
+        renderStates.forEach(({ roots, contentHost, mounts, originalHtml }) => {
+            roots.forEach((root) => root.unmount())
 
-            if (contentHost.isConnected && mount.parentElement === contentHost) {
+            if (contentHost.isConnected && mounts.some((mount) => mount.parentElement === contentHost)) {
                 contentHost.innerHTML = originalHtml
             }
         })
