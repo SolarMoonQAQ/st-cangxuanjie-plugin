@@ -1,12 +1,16 @@
 import { parseContent } from '@/beautify/content-parser.ts'
 import Content from '@/beautify/Content.tsx'
-import { logDiagnostic } from '@/diagnostics.ts'
 import { createRoot } from 'react-dom/client'
 
 type StopRender = () => void
 type RenderState = {
     mount: HTMLElement
     stop: StopRender
+}
+
+type RawContent = {
+    messageId: number
+    content: string
 }
 
 export const CONTENT_TAG_NAME = 'content'
@@ -16,27 +20,11 @@ export const CONTENT_CLOSE_TAG = `</${CONTENT_TAG_NAME}>`
 const MESSAGE_SELECTOR = '.mes_text'
 const renderStates = new Map<HTMLElement, RenderState>()
 
-function preview(value: string | null | undefined, limit = 100) {
-    const text = value ?? ''
-    return text.length > limit ? `${text.slice(0, limit)}…[${text.length - limit} chars]` : text
-}
-
 function isMeaningfulNode(node: Node) {
     return node.nodeType !== Node.TEXT_NODE || Boolean(node.textContent?.trim())
 }
 
-function describeNode(node: Node, index: number) {
-    const element = node.nodeType === Node.ELEMENT_NODE ? node as HTMLElement : null
-
-    return {
-        index,
-        name: node.nodeName,
-        className: preview(element?.className || null, 80),
-        text: preview(node.textContent?.replace(/\s+/g, ' ').trim(), 120),
-    }
-}
-
-function getRawMessageParts(messageElement: HTMLElement) {
+function getRawContent(messageElement: HTMLElement): RawContent | null {
     const messageId = Number(messageElement.closest('.mes')?.getAttribute('mesid'))
 
     if (!Number.isInteger(messageId)) return null
@@ -48,13 +36,9 @@ function getRawMessageParts(messageElement: HTMLElement) {
 
         if (!openMatch || !closeMatch || closeMatch.index <= openMatch.index) return null
 
-        const contentStart = openMatch.index + openMatch[0].length
-        const suffixStart = closeMatch.index + closeMatch[0].length
-
         return {
             messageId,
-            content: raw.slice(contentStart, closeMatch.index),
-            suffix: raw.slice(suffixStart),
+            content: raw.slice(openMatch.index + openMatch[0].length, closeMatch.index),
         }
     } catch {
         return null
@@ -68,7 +52,7 @@ function getDirectMessageChild(node: Node, messageElement: HTMLElement): ChildNo
         current = current.parentNode
     }
 
-    return current?.parentNode === messageElement ? current as ChildNode : null
+    return current?.parentNode === messageElement ? (current as ChildNode) : null
 }
 
 function getFormattedNodes(text: string, messageId: number, ownerDocument: Document) {
@@ -107,64 +91,54 @@ function matchFormattedContent(expected: Node[], live: Node[], startIndex: numbe
     return matchedLiveIndexes
 }
 
-function describeEdge(nodes: Node[], count: number) {
-    if (nodes.length === 0) return []
-
-    const indexes = [
-        ...nodes.slice(0, count).map((_, index) => index),
-        ...nodes.slice(-count).map((_, index) => Math.max(0, nodes.length - count) + index),
-    ]
-
-    return [...new Set(indexes)].map((index) => describeNode(nodes[index], index))
-}
-
-function logBoundaryProbe(messageElement: HTMLElement) {
-    const parts = getRawMessageParts(messageElement)
+/**
+ * 酒馆把 <content> 当作行内标签，会在第一个段落末尾隐式闭合它。
+ * 因此用原始消息中的正文单独走一次酒馆格式化，再与现场顶层节点匹配，
+ * 得到真正属于正文的连续 DOM 区间。
+ */
+function resolveContentRange(messageElement: HTMLElement): ChildNode[] | null {
+    const rawContent = getRawContent(messageElement)
     const contentMarker = messageElement.querySelector(CONTENT_TAG_NAME)
 
-    if (!parts || !contentMarker) {
-        logDiagnostic('boundary-probe-unavailable')
-        return
-    }
+    if (!rawContent || !contentMarker) return null
 
     const liveNodes = Array.from(messageElement.childNodes).filter(isMeaningfulNode)
     const startNode = getDirectMessageChild(contentMarker, messageElement)
     const startIndex = startNode ? liveNodes.indexOf(startNode) : -1
 
-    try {
-        const formattedContentNodes = getFormattedNodes(
-            parts.content,
-            parts.messageId,
-            messageElement.ownerDocument,
-        )
-        const formattedSuffixNodes = getFormattedNodes(
-            parts.suffix,
-            parts.messageId,
-            messageElement.ownerDocument,
-        )
-        const matchedIndexes = matchFormattedContent(
-            formattedContentNodes,
-            liveNodes,
-            startIndex,
-        )
+    if (!startNode || startIndex < 0) return null
 
-        logDiagnostic('boundary-probe', {
-            messageId: parts.messageId,
-            rawContentLength: parts.content.length,
-            rawSuffixPreview: preview(parts.suffix.trim(), 180),
-            liveNodeCount: liveNodes.length,
-            startIndex,
-            formattedContentNodeCount: formattedContentNodes.length,
-            formattedSuffixNodeCount: formattedSuffixNodes.length,
-            matchedContentNodeCount: matchedIndexes.length,
-            lastMatchedLiveIndex: matchedIndexes.at(-1) ?? null,
-            contentEdges: describeEdge(formattedContentNodes, 2),
-            suffixEdges: describeEdge(formattedSuffixNodes, 2),
-            liveEdges: describeEdge(liveNodes, 4),
-        })
+    let expectedNodes: Node[]
+
+    try {
+        expectedNodes = getFormattedNodes(
+            rawContent.content,
+            rawContent.messageId,
+            messageElement.ownerDocument,
+        )
     } catch {
-        logDiagnostic('boundary-probe-format-failed', { messageId: parts.messageId })
+        return null
     }
+
+    if (expectedNodes.length === 0) return null
+
+    const matchedIndexes = matchFormattedContent(expectedNodes, liveNodes, startIndex)
+
+    if (matchedIndexes.length !== expectedNodes.length || matchedIndexes[0] !== startIndex) {
+        return null
+    }
+
+    const lastNode = liveNodes[matchedIndexes[matchedIndexes.length - 1]] as ChildNode
+    const range: ChildNode[] = []
+    let current: ChildNode | null = startNode
+
+    while (current) {
+        range.push(current)
+        if (current === lastNode) return range
+        current = current.nextSibling
+    }
+
+    return null
 }
 
 function renderMessage(messageElement: HTMLElement) {
@@ -177,36 +151,26 @@ function renderMessage(messageElement: HTMLElement) {
         renderStates.delete(messageElement)
     }
 
-    logBoundaryProbe(messageElement)
+    const originalNodes = resolveContentRange(messageElement)
 
-    const originalChildren = Array.from(messageElement.childNodes)
-    const nodes = parseContent(messageElement)
-    const mount = messageElement.ownerDocument.createElement('div')
+    if (!originalNodes?.length) return
 
-    messageElement.replaceChildren(mount)
+    const ownerDocument = messageElement.ownerDocument
+    const contentHost = ownerDocument.createElement('div')
+    const mount = ownerDocument.createElement('div')
+
+    messageElement.insertBefore(mount, originalNodes[0])
+    originalNodes.forEach((node) => contentHost.appendChild(node))
 
     const root = createRoot(mount)
-    root.render(<Content nodes={nodes} contentHost={messageElement} />)
+    root.render(<Content nodes={parseContent(contentHost)} contentHost={contentHost} />)
 
     const stop = () => {
-        logDiagnostic('render-stop-start', {
-            messageId: messageElement.closest('.mes')?.getAttribute('mesid') ?? null,
-            messageConnected: messageElement.isConnected,
-            mountConnected: mount.isConnected,
-            mountIsDirectChild: mount.parentElement === messageElement,
-        })
-
         root.unmount()
 
         if (messageElement.isConnected && mount.parentElement === messageElement) {
-            messageElement.replaceChildren(...originalChildren)
+            mount.replaceWith(...originalNodes)
         }
-
-        logDiagnostic('render-stop-complete', {
-            messageId: messageElement.closest('.mes')?.getAttribute('mesid') ?? null,
-            restoredChildCount: messageElement.childNodes.length,
-            containsReactContent: Boolean(messageElement.querySelector('.cx-bg')),
-        })
     }
 
     renderStates.set(messageElement, { mount, stop })
@@ -242,13 +206,6 @@ function removeDisconnectedRenders() {
 
 export function startContentRender() {
     const tavernDocument = window.parent.document
-
-    logDiagnostic('runtime-start', {
-        markedMessageCount: tavernDocument.querySelectorAll(
-            `${MESSAGE_SELECTOR}:has(${CONTENT_TAG_NAME})`,
-        ).length,
-    })
-
     const observer = new MutationObserver((mutations) => {
         for (const mutation of mutations) {
             mutation.addedNodes.forEach(renderMessagesMarkedInside)
@@ -262,18 +219,14 @@ export function startContentRender() {
         subtree: true,
     })
 
-    tavernDocument
-        .querySelectorAll(CONTENT_TAG_NAME)
-        .forEach((contentElement) => {
-            const message = contentElement.closest<HTMLElement>(MESSAGE_SELECTOR)
-            if (message) renderMessage(message)
-        })
+    tavernDocument.querySelectorAll(CONTENT_TAG_NAME).forEach((contentElement) => {
+        const message = contentElement.closest<HTMLElement>(MESSAGE_SELECTOR)
+        if (message) renderMessage(message)
+    })
 
     return () => {
-        logDiagnostic('runtime-stop-start', { renderCount: renderStates.size })
         observer.disconnect()
         renderStates.forEach(({ stop }) => stop())
         renderStates.clear()
-        logDiagnostic('runtime-stop-complete')
     }
 }

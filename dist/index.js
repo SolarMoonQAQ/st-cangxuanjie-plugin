@@ -2908,14 +2908,8 @@ function qn({ nodes: e, contentHost: t }) {
 	});
 }
 //#endregion
-//#region src/diagnostics.ts
-var Jn = "[苍玄界DOM]";
-function Yn(e, t = {}) {
-	console.info(`${Jn} ${e} ${JSON.stringify(t)}`);
-}
-//#endregion
 //#region node_modules/.pnpm/scheduler@0.27.0/node_modules/scheduler/cjs/scheduler.production.js
-var Xn = /* @__PURE__ */ o(((e) => {
+var Jn = /* @__PURE__ */ o(((e) => {
 	function t(e, t) {
 		var n = e.length;
 		e.push(t);
@@ -3114,10 +3108,10 @@ var Xn = /* @__PURE__ */ o(((e) => {
 			}
 		};
 	};
-})), Zn = /* @__PURE__ */ o(((e, t) => {
-	t.exports = Xn();
-})), Qn = /* @__PURE__ */ o(((e) => {
-	var t = Zn(), n = m(), r = ze();
+})), Yn = /* @__PURE__ */ o(((e, t) => {
+	t.exports = Jn();
+})), Xn = /* @__PURE__ */ o(((e) => {
+	var t = Yn(), n = m(), r = ze();
 	function i(e) {
 		var t = "https://react.dev/errors/" + e;
 		if (1 < arguments.length) {
@@ -4225,9 +4219,9 @@ var Xn = /* @__PURE__ */ o(((e) => {
 		13,
 		27,
 		32
-	], Yn = pn && "CompositionEvent" in window, Xn = null;
-	pn && "documentMode" in document && (Xn = document.documentMode);
-	var Qn = pn && "TextEvent" in window && !Xn, $n = pn && (!Yn || Xn && 8 < Xn && 11 >= Xn), er = " ", tr = !1;
+	], Xn = pn && "CompositionEvent" in window, Zn = null;
+	pn && "documentMode" in document && (Zn = document.documentMode);
+	var Qn = pn && "TextEvent" in window && !Zn, $n = pn && (!Xn || Zn && 8 < Zn && 11 >= Zn), er = " ", tr = !1;
 	function nr(e, t) {
 		switch (e) {
 			case "keyup": return Jn.indexOf(t.keyCode) !== -1;
@@ -4251,7 +4245,7 @@ var Xn = /* @__PURE__ */ o(((e) => {
 		}
 	}
 	function or(e, t) {
-		if (ir) return e === "compositionend" || !Yn && nr(e, t) ? (e = vn(), _n = gn = P = null, ir = !1, e) : null;
+		if (ir) return e === "compositionend" || !Xn && nr(e, t) ? (e = vn(), _n = gn = P = null, ir = !1, e) : null;
 		switch (e) {
 			case "paste": return null;
 			case "keypress":
@@ -8899,7 +8893,7 @@ var Xn = /* @__PURE__ */ o(((e) => {
 					case "keyup": Rr(s, n, i);
 				}
 				var b;
-				if (Yn) b: {
+				if (Xn) b: {
 					switch (e) {
 						case "compositionstart":
 							var x = "onCompositionStart";
@@ -10524,7 +10518,7 @@ var Xn = /* @__PURE__ */ o(((e) => {
 		var n = !1, r = "", o = Ys, s = Xs, c = Zs;
 		return t != null && (!0 === t.unstable_strictMode && (n = !0), t.identifierPrefix !== void 0 && (r = t.identifierPrefix), t.onUncaughtError !== void 0 && (o = t.onUncaughtError), t.onCaughtError !== void 0 && (s = t.onCaughtError), t.onRecoverableError !== void 0 && (c = t.onRecoverableError)), t = tp(e, 1, !1, null, null, n, r, null, o, s, c, Fp), e[mt] = t.current, Cd(e), new Ip(t);
 	};
-})), $n = (/* @__PURE__ */ o(((e, t) => {
+})), Zn = (/* @__PURE__ */ o(((e, t) => {
 	function n() {
 		if (!(typeof __REACT_DEVTOOLS_GLOBAL_HOOK__ > "u" || typeof __REACT_DEVTOOLS_GLOBAL_HOOK__.checkDCE != "function")) try {
 			__REACT_DEVTOOLS_GLOBAL_HOOK__.checkDCE(n);
@@ -10532,158 +10526,122 @@ var Xn = /* @__PURE__ */ o(((e) => {
 			console.error(e);
 		}
 	}
-	n(), t.exports = Qn();
-})))(), er = "content", tr = `<${er}>`, nr = `</${er}>`, rr = ".mes_text", ir = /* @__PURE__ */ new Map();
-function ar(e, t = 100) {
-	let n = e ?? "";
-	return n.length > t ? `${n.slice(0, t)}…[${n.length - t} chars]` : n;
-}
-function or(e) {
+	n(), t.exports = Xn();
+})))(), Qn = "content", $n = `<${Qn}>`, er = `</${Qn}>`, tr = ".mes_text", nr = /* @__PURE__ */ new Map();
+function rr(e) {
 	return e.nodeType !== Node.TEXT_NODE || !!e.textContent?.trim();
 }
-function sr(e, t) {
-	let n = e.nodeType === Node.ELEMENT_NODE ? e : null;
-	return {
-		index: t,
-		name: e.nodeName,
-		className: ar(n?.className || null, 80),
-		text: ar(e.textContent?.replace(/\s+/g, " ").trim(), 120)
-	};
-}
-function cr(e) {
+function ir(e) {
 	let t = Number(e.closest(".mes")?.getAttribute("mesid"));
 	if (!Number.isInteger(t)) return null;
 	try {
 		let e = getChatMessages(t)[0]?.message ?? "", n = /<content\b[^>]*>/i.exec(e), r = /<\/content\s*>/i.exec(e);
-		if (!n || !r || r.index <= n.index) return null;
-		let i = n.index + n[0].length, a = r.index + r[0].length;
-		return {
+		return !n || !r || r.index <= n.index ? null : {
 			messageId: t,
-			content: e.slice(i, r.index),
-			suffix: e.slice(a)
+			content: e.slice(n.index + n[0].length, r.index)
 		};
 	} catch {
 		return null;
 	}
 }
-function lr(e, t) {
+function ar(e, t) {
 	let n = e;
 	for (; n?.parentNode && n.parentNode !== t;) n = n.parentNode;
 	return n?.parentNode === t ? n : null;
 }
-function ur(e, t, n) {
+function or(e, t, n) {
 	let r = n.createElement("div");
-	return r.innerHTML = formatAsDisplayedMessage(e, { message_id: t }), Array.from(r.childNodes).filter(or);
+	return r.innerHTML = formatAsDisplayedMessage(e, { message_id: t }), Array.from(r.childNodes).filter(rr);
 }
-function dr(e) {
+function sr(e) {
 	return e.textContent?.replace(/\s+/g, " ").trim() ?? "";
 }
-function fr(e, t) {
-	let n = dr(e), r = dr(t);
+function cr(e, t) {
+	let n = sr(e), r = sr(t);
 	return !n || !r ? e.nodeName === t.nodeName : n === r;
 }
-function pr(e, t, n) {
+function lr(e, t, n) {
 	let r = [], i = Math.max(0, n);
 	for (let n of e) {
-		for (; i < t.length && !fr(n, t[i]);) i += 1;
+		for (; i < t.length && !cr(n, t[i]);) i += 1;
 		if (i >= t.length) break;
 		r.push(i), i += 1;
 	}
 	return r;
 }
-function mr(e, t) {
-	if (e.length === 0) return [];
-	let n = [...e.slice(0, t).map((e, t) => t), ...e.slice(-t).map((n, r) => Math.max(0, e.length - t) + r)];
-	return [...new Set(n)].map((t) => sr(e[t], t));
-}
-function hr(e) {
-	let t = cr(e), n = e.querySelector(er);
-	if (!t || !n) {
-		Yn("boundary-probe-unavailable");
-		return;
-	}
-	let r = Array.from(e.childNodes).filter(or), i = lr(n, e), a = i ? r.indexOf(i) : -1;
+function ur(e) {
+	let t = ir(e), n = e.querySelector(Qn);
+	if (!t || !n) return null;
+	let r = Array.from(e.childNodes).filter(rr), i = ar(n, e), a = i ? r.indexOf(i) : -1;
+	if (!i || a < 0) return null;
+	let o;
 	try {
-		let n = ur(t.content, t.messageId, e.ownerDocument), i = ur(t.suffix, t.messageId, e.ownerDocument), o = pr(n, r, a);
-		Yn("boundary-probe", {
-			messageId: t.messageId,
-			rawContentLength: t.content.length,
-			rawSuffixPreview: ar(t.suffix.trim(), 180),
-			liveNodeCount: r.length,
-			startIndex: a,
-			formattedContentNodeCount: n.length,
-			formattedSuffixNodeCount: i.length,
-			matchedContentNodeCount: o.length,
-			lastMatchedLiveIndex: o.at(-1) ?? null,
-			contentEdges: mr(n, 2),
-			suffixEdges: mr(i, 2),
-			liveEdges: mr(r, 4)
-		});
+		o = or(t.content, t.messageId, e.ownerDocument);
 	} catch {
-		Yn("boundary-probe-format-failed", { messageId: t.messageId });
+		return null;
 	}
+	if (o.length === 0) return null;
+	let s = lr(o, r, a);
+	if (s.length !== o.length || s[0] !== a) return null;
+	let c = r[s[s.length - 1]], l = [], u = i;
+	for (; u;) {
+		if (l.push(u), u === c) return l;
+		u = u.nextSibling;
+	}
+	return null;
 }
-function gr(e) {
-	let t = ir.get(e);
+function dr(e) {
+	let t = nr.get(e);
 	if (t?.mount.isConnected) return;
-	t && (t.stop(), ir.delete(e)), hr(e);
-	let n = Array.from(e.childNodes), r = d(e), i = e.ownerDocument.createElement("div");
-	e.replaceChildren(i);
-	let a = (0, $n.createRoot)(i);
-	a.render(/* @__PURE__ */ (0, j.jsx)(qn, {
-		nodes: r,
-		contentHost: e
-	})), ir.set(e, {
-		mount: i,
+	t && (t.stop(), nr.delete(e));
+	let n = ur(e);
+	if (!n?.length) return;
+	let r = e.ownerDocument, i = r.createElement("div"), a = r.createElement("div");
+	e.insertBefore(a, n[0]), n.forEach((e) => i.appendChild(e));
+	let o = (0, Zn.createRoot)(a);
+	o.render(/* @__PURE__ */ (0, j.jsx)(qn, {
+		nodes: d(i),
+		contentHost: i
+	})), nr.set(e, {
+		mount: a,
 		stop: () => {
-			Yn("render-stop-start", {
-				messageId: e.closest(".mes")?.getAttribute("mesid") ?? null,
-				messageConnected: e.isConnected,
-				mountConnected: i.isConnected,
-				mountIsDirectChild: i.parentElement === e
-			}), a.unmount(), e.isConnected && i.parentElement === e && e.replaceChildren(...n), Yn("render-stop-complete", {
-				messageId: e.closest(".mes")?.getAttribute("mesid") ?? null,
-				restoredChildCount: e.childNodes.length,
-				containsReactContent: !!e.querySelector(".cx-bg")
-			});
+			o.unmount(), e.isConnected && a.parentElement === e && a.replaceWith(...n);
 		}
 	});
 }
-function _r(e) {
+function fr(e) {
 	if (e.nodeType !== 1) return;
 	let t = e, n = /* @__PURE__ */ new Set();
 	if (t.matches("content")) {
-		let e = t.closest(rr);
+		let e = t.closest(tr);
 		e && n.add(e);
 	}
-	t.querySelectorAll(er).forEach((e) => {
-		let t = e.closest(rr);
+	t.querySelectorAll(Qn).forEach((e) => {
+		let t = e.closest(tr);
 		t && n.add(t);
-	}), n.forEach(gr);
+	}), n.forEach(dr);
 }
-function vr() {
-	for (let [e, t] of ir) e.isConnected && t.mount.isConnected || (t.stop(), ir.delete(e));
+function pr() {
+	for (let [e, t] of nr) e.isConnected && t.mount.isConnected || (t.stop(), nr.delete(e));
 }
-function yr() {
-	let e = window.parent.document;
-	Yn("runtime-start", { markedMessageCount: e.querySelectorAll(`${rr}:has(${er})`).length });
-	let t = new MutationObserver((e) => {
-		for (let t of e) t.addedNodes.forEach(_r);
-		vr();
+function mr() {
+	let e = window.parent.document, t = new MutationObserver((e) => {
+		for (let t of e) t.addedNodes.forEach(fr);
+		pr();
 	});
 	return t.observe(e.body, {
 		childList: !0,
 		subtree: !0
-	}), e.querySelectorAll(er).forEach((e) => {
-		let t = e.closest(rr);
-		t && gr(t);
+	}), e.querySelectorAll(Qn).forEach((e) => {
+		let t = e.closest(tr);
+		t && dr(t);
 	}), () => {
-		Yn("runtime-stop-start", { renderCount: ir.size }), t.disconnect(), ir.forEach(({ stop: e }) => e()), ir.clear(), Yn("runtime-stop-complete");
+		t.disconnect(), nr.forEach(({ stop: e }) => e()), nr.clear();
 	};
 }
 //#endregion
 //#region src/beautify/content-inject.ts
-var br = {
+var hr = {
 	id: "cangxuanjie-content-format",
 	position: "in_chat",
 	depth: 0,
@@ -10692,21 +10650,21 @@ var br = {
 	content: `
 输出时必须遵守以下格式：
 
-1. 所有面向用户展示的正文内容，包括旁白、动作、环境描写、角色对话，都必须放在唯一的一对 ${tr} 和 ${nr} 标签内。
-2. 除了 ${tr} ... ${nr} 外，不要输出任何正文内容。
+1. 所有面向用户展示的正文内容，包括旁白、动作、环境描写、角色对话，都必须放在唯一的一对 ${$n} 和 ${er} 标签内。
+2. 除了 ${$n} ... ${er} 外，不要输出任何正文内容。
 3. 不要遗漏标签，不要嵌套 content 标签。
 4. 不要把标签放进 Markdown 代码块中。
 
 格式示例：
 
-${tr}
+${$n}
 这里是完整的正文内容。
-${nr}
+${er}
 `
 };
-function xr() {
+function gr() {
 	let e = null, t = () => {
-		e?.(), e = injectPrompts([br]).uninject;
+		e?.(), e = injectPrompts([hr]).uninject;
 	};
 	t();
 	let n = [eventOn(tavern_events.CHAT_CHANGED, t)];
@@ -10716,51 +10674,20 @@ function xr() {
 }
 //#endregion
 //#region src/main.tsx
-var Sr = "cangxuanjie-plugin-style", Cr = null, wr = null, Tr = null, Er = !1;
-function Dr() {
+var _r = "cangxuanjie-plugin-style", vr = null, yr = null;
+function br() {
 	let e = window.parent.document;
-	e.getElementById(Sr)?.remove();
+	e.getElementById(_r)?.remove();
 	let t = e.createElement("style");
-	t.id = Sr, t.textContent = l, e.head.appendChild(t), Cr = xr(), wr = yr();
-	let n = window.frameElement, r = e.defaultView?.MutationObserver;
-	if (n && e.body && r) {
-		let t = new r(() => {
-			n.isConnected || Or("frame-removed");
-		});
-		t.observe(e.body, {
-			childList: !0,
-			subtree: !0
-		}), Tr = () => t.disconnect();
-	}
-	Yn("plugin-initialized", {
-		hasScriptFrame: !!n,
-		frameRemovalObserverInstalled: !!Tr
-	}), toastr.success("苍玄界插件已加载");
+	t.id = _r, t.textContent = l, e.head.appendChild(t), vr = gr(), yr = mr(), toastr.success("苍玄界插件已加载");
 }
 $(() => {
 	try {
-		Dr();
-	} catch {
-		toastr.error("苍玄界插件加载失败");
+		br();
+	} catch (e) {
+		console.error("[苍玄界插件] 加载失败", e), toastr.error("苍玄界插件加载失败");
 	}
+}), $(window).on("pagehide", () => {
+	yr?.(), yr = null, vr?.(), vr = null, window.parent.document.getElementById(_r)?.remove();
 });
-function Or(e) {
-	if (Er) return;
-	Er = !0;
-	let t = window.parent.document;
-	Yn("cleanup-start", {
-		source: e,
-		reactContentCount: t.querySelectorAll(".cx-bg").length,
-		stylePresent: !!t.getElementById(Sr)
-	}), Tr?.(), Tr = null, wr?.(), wr = null, Cr?.(), Cr = null, t.getElementById(Sr)?.remove(), Yn("cleanup-complete", {
-		source: e,
-		reactContentCount: t.querySelectorAll(".cx-bg").length,
-		stylePresent: !!t.getElementById(Sr)
-	});
-}
-for (let e of [
-	"pagehide",
-	"beforeunload",
-	"unload"
-]) window.addEventListener(e, () => Or(e), { once: !0 });
 //#endregion
