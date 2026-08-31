@@ -1,6 +1,7 @@
 import { createRoot, type Root } from 'react-dom/client'
 import pluginCss from './index.css?inline'
-import { injectBeautifyPrompt, startContentRender } from './beautify/content.tsx'
+import { injectBeautifyPrompt } from './beautify/content-inject.ts'
+import { startContentRender } from '@/beautify/content-runtime.tsx'
 
 const CONTAINER_ID = 'tavern-cangxuanjie-root'
 const STYLE_ID = 'cangxuanjie-plugin-style'

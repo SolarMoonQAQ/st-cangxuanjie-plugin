@@ -54,13 +54,8 @@
         @apply text-(length:--cx-dialogue-size) text-ink-medium leading-relaxed;
     }
 
-    .cx-dialogue-prefix,
-    .cx-dialogue-suffix {
-        display: none;
-    }
-
-    .cx-dom-slot > :first-child {
-        margin: 0;
+    .cx-dialogue-name, .cx-dialogue-name-head {
+        @apply text-shadow-md
     }
 
     .cx-dialogue-name {
@@ -89,6 +84,6 @@
     }
 
     .cx-narration {
-        @apply text-(length:--cx-body-size) py-2 text-ink-heavy leading-relaxed;
+        @apply text-(length:--cx-body-size) text-ink-heavy leading-relaxed;
     }
 }
