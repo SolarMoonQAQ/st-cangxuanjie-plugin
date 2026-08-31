@@ -9,9 +9,9 @@ const renderStates = new Map<number, StopRender>()
 export const CONTENT_TAG_NAME = 'content'
 export const CONTENT_OPEN_TAG = `<${CONTENT_TAG_NAME}>`
 export const CONTENT_CLOSE_TAG = `</${CONTENT_TAG_NAME}>`
-export const CONTENT_HOST_OPEN_TAG = '<div data-cx-content markdown="1">'
-export const CONTENT_HOST_CLOSE_TAG = '</div>'
 
+const CONTENT_HOST_OPEN_TAG = '<div data-cx-content markdown="1">'
+const CONTENT_HOST_CLOSE_TAG = '</div>'
 const CONTENT_HOST_SELECTOR = 'div[data-cx-content]'
 
 function escapeRegExp(value: string): string {
@@ -23,16 +23,33 @@ export const CONTENT_BLOCK_PATTERN = new RegExp(
     'i',
 )
 
-function extractRawContent(messageId: number): string | null {
+function createFormattedMessage(messageId: number): HTMLDivElement | null {
     const message = SillyTavern.chat[messageId]?.mes
 
     if (typeof message !== 'string') {
         return null
     }
 
-    const match = message.match(CONTENT_BLOCK_PATTERN)
+    let hasContent = false
+    const normalizedMessage = message.replace(
+        CONTENT_BLOCK_PATTERN,
+        (_block, rawContent: string) => {
+            hasContent = true
+            return `${CONTENT_HOST_OPEN_TAG}\n${rawContent.trim()}\n${CONTENT_HOST_CLOSE_TAG}`
+        },
+    )
 
-    return match?.[1].trim() ?? null
+    if (!hasContent) {
+        return null
+    }
+
+    const holder = document.createElement('div')
+
+    holder.innerHTML = formatAsDisplayedMessage(normalizedMessage, {
+        message_id: messageId,
+    })
+
+    return holder
 }
 
 function findDisplayedMesText(messageId: number): HTMLElement | null {
@@ -53,41 +70,15 @@ function findDisplayedMesText(messageId: number): HTMLElement | null {
     return mesText
 }
 
-function findContentHost(mesText: HTMLElement): HTMLElement | null {
-    return mesText.querySelector<HTMLElement>(CONTENT_HOST_SELECTOR)
-}
-
-function createLegacyContentHost(messageId: number, mesText: HTMLElement): HTMLElement | null {
-    const message = SillyTavern.chat[messageId]?.mes
-
-    if (typeof message !== 'string') {
-        return null
-    }
-
-    const normalizedMessage = message.replace(
-        CONTENT_BLOCK_PATTERN,
-        (_block, rawContent: string) =>
-            `${CONTENT_HOST_OPEN_TAG}\n${rawContent.trim()}\n${CONTENT_HOST_CLOSE_TAG}`,
-    )
-    const holder = document.createElement('div')
-
-    holder.innerHTML = formatAsDisplayedMessage(normalizedMessage, {
-        message_id: messageId,
-    })
-    mesText.replaceChildren(...holder.childNodes)
-
-    return findContentHost(mesText)
-}
-
 function stopMessageRender(messageId: number) {
     renderStates.get(messageId)?.()
     renderStates.delete(messageId)
 }
 
 function renderOneMessage(messageId: number) {
-    const rawContent = extractRawContent(messageId)
+    const formattedMessage = createFormattedMessage(messageId)
 
-    if (!rawContent) {
+    if (!formattedMessage) {
         stopMessageRender(messageId)
         return
     }
@@ -101,11 +92,13 @@ function renderOneMessage(messageId: number) {
 
     stopMessageRender(messageId)
 
-    const contentHost = findContentHost(mesText) ?? createLegacyContentHost(messageId, mesText)
+    const contentHost = formattedMessage.querySelector<HTMLElement>(CONTENT_HOST_SELECTOR)
 
     if (!contentHost) {
         return
     }
+
+    mesText.replaceChildren(...formattedMessage.childNodes)
 
     const stop = renderMessage(contentHost)
 

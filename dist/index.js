@@ -10531,51 +10531,48 @@ function rr(e) {
 var ir = rr(Zn), ar = new RegExp(String.raw`<${ir}\b[^>]*>([\s\S]*?)</${ir}>`, "i");
 function or(e) {
 	let t = SillyTavern.chat[e]?.mes;
-	return typeof t == "string" ? t.match(ar)?.[1].trim() ?? null : null;
+	if (typeof t != "string") return null;
+	let n = !1, r = t.replace(ar, (e, t) => (n = !0, `${er}\n${t.trim()}\n${tr}`));
+	if (!n) return null;
+	let i = document.createElement("div");
+	return i.innerHTML = formatAsDisplayedMessage(r, { message_id: e }), i;
 }
 function sr(e) {
 	let t = retrieveDisplayedMessage(e)[0];
 	return t && (t.matches(".mes_text") ? t : t.querySelector(".mes_text")) || null;
 }
 function cr(e) {
-	return e.querySelector(nr);
-}
-function lr(e, t) {
-	let n = SillyTavern.chat[e]?.mes;
-	if (typeof n != "string") return null;
-	let r = n.replace(ar, (e, t) => `${er}\n${t.trim()}\n${tr}`), i = document.createElement("div");
-	return i.innerHTML = formatAsDisplayedMessage(r, { message_id: e }), t.replaceChildren(...i.childNodes), cr(t);
-}
-function ur(e) {
 	Xn.get(e)?.(), Xn.delete(e);
 }
-function dr(e) {
-	if (!or(e)) {
-		ur(e);
-		return;
-	}
-	let t = sr(e);
+function lr(e) {
+	let t = or(e);
 	if (!t) {
-		ur(e);
+		cr(e);
 		return;
 	}
-	ur(e);
-	let n = cr(t) ?? lr(e, t);
-	if (!n) return;
-	let r = mr(n);
-	r && Xn.set(e, r);
+	let n = sr(e);
+	if (!n) {
+		cr(e);
+		return;
+	}
+	cr(e);
+	let r = t.querySelector(nr);
+	if (!r) return;
+	n.replaceChildren(...t.childNodes);
+	let i = fr(r);
+	i && Xn.set(e, i);
 }
-function fr() {
+function ur() {
 	let e = SillyTavern.chat.length;
-	for (let t = 0; t < e; t += 1) dr(t);
-	for (let t of Xn.keys()) t >= e && ur(t);
+	for (let t = 0; t < e; t += 1) lr(t);
+	for (let t of Xn.keys()) t >= e && cr(t);
 }
-function pr(e) {
+function dr(e) {
 	let t = document.createElement("div");
 	return t.replaceChildren(...e.childNodes), t;
 }
-function mr(e) {
-	let t = pr(e), n = Array.from(t.childNodes), r = y(t), i = document.createElement("div");
+function fr(e) {
+	let t = dr(e), n = Array.from(t.childNodes), r = y(t), i = document.createElement("div");
 	i.className = "cx-react-mount", e.appendChild(i);
 	let a = (0, g.createRoot)(i);
 	return a.render(/* @__PURE__ */ (0, M.jsx)(Yn, {
@@ -10585,23 +10582,23 @@ function mr(e) {
 		a.unmount(), i.parentElement === e && e.replaceChildren(...n);
 	};
 }
-function hr() {
-	fr();
+function pr() {
+	ur();
 	let e = [
-		eventOn(tavern_events.CHAT_CHANGED, fr),
-		eventOn(tavern_events.MORE_MESSAGES_LOADED, fr),
-		eventOn(tavern_events.CHARACTER_MESSAGE_RENDERED, dr),
-		eventOn(tavern_events.MESSAGE_EDITED, dr),
-		eventOn(tavern_events.MESSAGE_UPDATED, dr)
+		eventOn(tavern_events.CHAT_CHANGED, ur),
+		eventOn(tavern_events.MORE_MESSAGES_LOADED, ur),
+		eventOn(tavern_events.CHARACTER_MESSAGE_RENDERED, lr),
+		eventOn(tavern_events.MESSAGE_EDITED, lr),
+		eventOn(tavern_events.MESSAGE_UPDATED, lr)
 	];
 	return () => {
 		e.forEach((e) => e.stop());
-		for (let e of Xn.keys()) ur(e);
+		for (let e of Xn.keys()) cr(e);
 	};
 }
 //#endregion
 //#region src/beautify/content-inject.ts
-var gr = {
+var mr = {
 	id: "cangxuanjie-content-format",
 	position: "in_chat",
 	depth: 0,
@@ -10611,23 +10608,20 @@ var gr = {
 输出时必须遵守以下格式：
 
 1. 所有面向用户展示的正文内容，包括旁白、动作、环境描写、角色对话，都必须放在唯一的一对 ${Qn} 和 ${$n} 标签内。
-2. content 标签内必须保留 ${er} 和 ${tr}，正文只能写在这个 div 内。
-3. 除了下面展示的固定结构外，不要输出任何正文内容。
-4. 不要遗漏标签，不要嵌套 content 标签，不要修改 div 的属性。
-5. 不要把标签放进 Markdown 代码块中。
+2. 除了 ${Qn} ... ${$n} 外，不要输出任何正文内容。
+3. 不要遗漏标签，不要嵌套 content 标签。
+4. 不要把标签放进 Markdown 代码块中。
 
-固定格式：
+格式示例：
 
 ${Qn}
-${er}
 这里是完整的正文内容。
-${tr}
 ${$n}
 `
 };
-function _r() {
+function hr() {
 	let e = null, t = () => {
-		e?.(), e = injectPrompts([gr]).uninject;
+		e?.(), e = injectPrompts([mr]).uninject;
 	};
 	t();
 	let n = [eventOn(tavern_events.CHAT_CHANGED, t)];
@@ -10637,10 +10631,10 @@ function _r() {
 }
 //#endregion
 //#region src/main.tsx
-var vr = "tavern-cangxuanjie-root", yr = "cangxuanjie-plugin-style", br = null, xr = null, Sr = null, Cr = null;
+var gr = "tavern-cangxuanjie-root", _r = "cangxuanjie-plugin-style", vr = null, yr = null, br = null, xr = null;
 $(() => {
-	$(`#${vr}`).remove(), xr = $("<div>").attr("id", vr).appendTo("body")[0], br = (0, g.createRoot)(xr), toastr.success("苍玄界插件已加载"), $(`#${yr}`).remove(), $("<style>").attr("id", yr).text(_).appendTo("head"), Sr = _r(), Cr = hr();
+	$(`#${gr}`).remove(), yr = $("<div>").attr("id", gr).appendTo("body")[0], vr = (0, g.createRoot)(yr), toastr.success("苍玄界插件已加载"), $(`#${_r}`).remove(), $("<style>").attr("id", _r).text(_).appendTo("head"), br = hr(), xr = pr();
 }), $(window).on("pagehide", () => {
-	br?.unmount(), xr?.remove(), br = null, xr = null, $(`#${yr}`).remove(), Sr?.(), Sr = null, Cr?.(), Cr = null;
+	vr?.unmount(), yr?.remove(), vr = null, yr = null, $(`#${_r}`).remove(), br?.(), br = null, xr?.(), xr = null;
 });
 //#endregion
