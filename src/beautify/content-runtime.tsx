@@ -33,16 +33,6 @@ function extractRawContent(messageId: number): string | null {
     return match?.[1].trim() ?? null
 }
 
-function createFormattedHolder(rawContent: string, messageId: number): HTMLDivElement {
-    const holder = document.createElement('div')
-
-    holder.innerHTML = formatAsDisplayedMessage(rawContent, {
-        message_id: messageId,
-    })
-
-    return holder
-}
-
 function findContentHost(messageId: number): HTMLElement | null {
     const displayed = retrieveDisplayedMessage(messageId)[0] as HTMLElement | undefined
 
@@ -142,15 +132,15 @@ function scheduleAllMessagesRender() {
 }
 
 function renderMessage(messageId: number, contentHost: HTMLElement) {
-    const rawContent = extractRawContent(messageId)
-
-    if (!rawContent) {
+    if (!extractRawContent(messageId)) {
         return
     }
 
-    const holder = createFormattedHolder(rawContent, messageId)
-
-    const nodes = parseContent(holder)
+    // The message DOM has already gone through SillyTavern's display regexes.
+    // Parse and reuse those final nodes instead of formatting raw text again;
+    // a second formatAsDisplayedMessage call duplicates plain text and can
+    // re-run third-party regex/frontend transforms.
+    const nodes = parseContent(contentHost)
 
     const originalHtml = contentHost.innerHTML
 

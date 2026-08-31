@@ -10533,79 +10533,74 @@ function ar(e) {
 	let t = SillyTavern.chat[e]?.mes;
 	return typeof t == "string" ? t.match(ir)?.[1].trim() ?? null : null;
 }
-function or(e, t) {
-	let n = document.createElement("div");
-	return n.innerHTML = formatAsDisplayedMessage(e, { message_id: t }), n;
-}
-function sr(e) {
+function or(e) {
 	let t = retrieveDisplayedMessage(e)[0];
 	if (!t) return null;
 	let n = t.matches(".mes_text") ? t : t.querySelector(".mes_text");
 	return n ? n.matches("content") ? n : n.querySelector($n) : null;
 }
-function cr(e) {
+function sr(e) {
 	Xn.get(e)?.(), Xn.delete(e);
 }
-function lr(e) {
-	let t = sr(e);
+function cr(e) {
+	let t = or(e);
 	if (!t) return;
-	cr(e);
-	let n = mr(e, t);
+	sr(e);
+	let n = pr(e, t);
 	n && Xn.set(e, n);
 }
-function ur() {
+function lr() {
 	let e = SillyTavern.chat.length;
-	for (let t = 0; t < e; t += 1) lr(t);
-	for (let t of Xn.keys()) t >= e && cr(t);
+	for (let t = 0; t < e; t += 1) cr(t);
+	for (let t of Xn.keys()) t >= e && sr(t);
 }
-function dr() {
+function ur() {
 	Qn = null;
 	let e = [...Zn];
 	Zn.clear();
-	for (let t of e) lr(t);
+	for (let t of e) cr(t);
 }
-function fr(e) {
+function dr(e) {
 	Zn.add(e), Qn === null && (Qn = window.setTimeout(() => {
-		window.requestAnimationFrame(dr);
+		window.requestAnimationFrame(ur);
 	}, 0));
 }
-function pr() {
-	for (let e of Xn.keys()) cr(e);
+function fr() {
+	for (let e of Xn.keys()) sr(e);
 	Qn !== null && (window.clearTimeout(Qn), Qn = null), Zn.clear(), Qn = window.setTimeout(() => {
-		Qn = null, window.requestAnimationFrame(ur);
+		Qn = null, window.requestAnimationFrame(lr);
 	}, 0);
 }
-function mr(e, t) {
-	let n = ar(e);
-	if (!n) return;
-	let r = y(or(n, e)), i = t.innerHTML, a = document.createElement("div");
-	a.className = "cx-react-mount", t.replaceChildren(a);
-	let o = (0, g.createRoot)(a);
-	return o.render(/* @__PURE__ */ (0, M.jsx)(Yn, {
-		nodes: r,
+function pr(e, t) {
+	if (!ar(e)) return;
+	let n = y(t), r = t.innerHTML, i = document.createElement("div");
+	i.className = "cx-react-mount", t.replaceChildren(i);
+	let a = (0, g.createRoot)(i);
+	return a.render(/* @__PURE__ */ (0, M.jsx)(Yn, {
+		nodes: n,
 		contentHost: t
 	})), () => {
-		o.unmount(), t.isConnected && a.parentElement === t && (t.innerHTML = i);
+		a.unmount(), t.isConnected && i.parentElement === t && (t.innerHTML = r);
 	};
 }
-function hr() {
-	ur();
+function mr() {
+	lr();
 	let e = [
-		eventOn(tavern_events.CHAT_CHANGED, pr),
-		eventOn(tavern_events.MORE_MESSAGES_LOADED, pr),
-		eventOn(tavern_events.CHARACTER_MESSAGE_RENDERED, fr),
-		eventOn(tavern_events.MESSAGE_EDITED, fr),
-		eventOn(tavern_events.MESSAGE_UPDATED, fr),
-		eventOn(tavern_events.MESSAGE_DELETED, pr)
+		eventOn(tavern_events.CHAT_CHANGED, fr),
+		eventOn(tavern_events.MORE_MESSAGES_LOADED, fr),
+		eventOn(tavern_events.CHARACTER_MESSAGE_RENDERED, dr),
+		eventOn(tavern_events.MESSAGE_EDITED, dr),
+		eventOn(tavern_events.MESSAGE_UPDATED, dr),
+		eventOn(tavern_events.MESSAGE_DELETED, fr)
 	];
 	return () => {
 		e.forEach((e) => e.stop()), Qn !== null && (window.clearTimeout(Qn), Qn = null), Zn.clear();
-		for (let e of Xn.keys()) cr(e);
+		for (let e of Xn.keys()) sr(e);
 	};
 }
 //#endregion
 //#region src/beautify/content-inject.ts
-var gr = {
+var hr = {
 	id: "cangxuanjie-content-format",
 	position: "in_chat",
 	depth: 0,
@@ -10626,9 +10621,9 @@ ${er}
 ${tr}
 `
 };
-function _r() {
+function gr() {
 	let e = null, t = () => {
-		e?.(), e = injectPrompts([gr]).uninject;
+		e?.(), e = injectPrompts([hr]).uninject;
 	};
 	t();
 	let n = [eventOn(tavern_events.CHAT_CHANGED, t)];
@@ -10638,10 +10633,10 @@ function _r() {
 }
 //#endregion
 //#region src/main.tsx
-var vr = "tavern-cangxuanjie-root", yr = "cangxuanjie-plugin-style", br = null, xr = null, Sr = null, Cr = null;
+var _r = "tavern-cangxuanjie-root", vr = "cangxuanjie-plugin-style", yr = null, br = null, xr = null, Sr = null;
 $(() => {
-	$(`#${vr}`).remove(), xr = $("<div>").attr("id", vr).appendTo("body")[0], br = (0, g.createRoot)(xr), toastr.success("苍玄界插件已加载"), $(`#${yr}`).remove(), $("<style>").attr("id", yr).text(_).appendTo("head"), Sr = _r(), Cr = hr();
+	$(`#${_r}`).remove(), br = $("<div>").attr("id", _r).appendTo("body")[0], yr = (0, g.createRoot)(br), toastr.success("苍玄界插件已加载"), $(`#${vr}`).remove(), $("<style>").attr("id", vr).text(_).appendTo("head"), xr = gr(), Sr = mr();
 }), $(window).on("pagehide", () => {
-	br?.unmount(), xr?.remove(), br = null, xr = null, $(`#${yr}`).remove(), Sr?.(), Sr = null, Cr?.(), Cr = null;
+	yr?.unmount(), br?.remove(), yr = null, br = null, $(`#${vr}`).remove(), xr?.(), xr = null, Sr?.(), Sr = null;
 });
 //#endregion
