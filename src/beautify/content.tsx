@@ -47,6 +47,18 @@ type PendingRender = {
 // mutation until two paint cycles have completed, and coalesce duplicate
 // events for the same message.
 const pendingRenders = new Map<number, PendingRender>()
+const preservedContentHosts = new Set<HTMLElement>()
+
+function hasThirdPartyRenderedNodes(contentHost: HTMLElement) {
+    // Plain message formatting normally leaves paragraphs and line breaks.
+    // Any other element may belong to a regex/frontend extension (for
+    // example an <inner> replacement), so React must leave this subtree alone.
+    return Array.from(contentHost.querySelectorAll('*')).some((element) => {
+        if (element.closest('.cx-react-mount')) return false
+
+        return element.tagName !== 'P' && element.tagName !== 'BR'
+    })
+}
 
 export function injectBeautifyPrompt() {
     let uninject: (() => void) | null = null
@@ -104,6 +116,13 @@ function renderMessage(messageId: number) {
 
     if (!contentHost) {
         console.warn(`[苍玄界] 找不到 content 节点，第 ${messageId} 楼跳过渲染`)
+        return
+    }
+
+    if (hasThirdPartyRenderedNodes(contentHost)) {
+        contentHost.classList.add('cx-bg')
+        preservedContentHosts.add(contentHost)
+        console.info(`[苍玄界] 第 ${messageId} 楼包含其他插件生成的节点，保留原始渲染结果`)
         return
     }
 
@@ -200,6 +219,11 @@ export function startContentRender() {
             }
         })
         pendingRenders.clear()
+
+        preservedContentHosts.forEach((contentHost) => {
+            contentHost.classList.remove('cx-bg')
+        })
+        preservedContentHosts.clear()
 
         renderStates.forEach(({ root, contentHost, mount, originalHtml }) => {
             root.unmount()
