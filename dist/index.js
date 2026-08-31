@@ -10524,81 +10524,96 @@ function Yn({ nodes: e, contentHost: t }) {
 }
 //#endregion
 //#region src/beautify/content-runtime.tsx
-var Xn = /* @__PURE__ */ new Map(), Zn = "content", Qn = `<${Zn}>`, $n = `</${Zn}>`, er = "<div data-cx-content markdown=\"1\">", tr = "</div>", nr = "div[data-cx-content]";
-function rr(e) {
+var Xn = /* @__PURE__ */ new Map(), Zn = "content", Qn = `<${Zn}>`, $n = `</${Zn}>`, er = "<div data-cx-content markdown=\"1\">", tr = "</div>", nr = "div[data-cx-content]", rr = "780dd8cc-d6c3-4ff7-985f-280dc0d3365e", ir = "苍玄界：content 显示容器";
+function ar(e) {
 	return e.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
-var ir = rr(Zn), ar = new RegExp(String.raw`<${ir}\b[^>]*>([\s\S]*?)</${ir}>`, "i");
-function or(e) {
-	let t = SillyTavern.chat[e]?.mes;
-	if (typeof t != "string") return null;
-	let n = !1, r = t.replace(ar, (e, t) => (n = !0, `${er}\n${t.trim()}\n${tr}`));
-	if (!n) return null;
-	let i = document.createElement("div");
-	return i.innerHTML = formatAsDisplayedMessage(r, { message_id: e }), i;
+var or = ar(Zn), sr = {
+	id: rr,
+	script_name: ir,
+	enabled: !0,
+	find_regex: String.raw`/<${or}\b[^>]*>([\s\S]*?)<\/${or}>/gi`,
+	replace_string: `\n${er}\n$1\n${tr}\n`,
+	trim_strings: [],
+	source: {
+		user_input: !1,
+		ai_output: !0,
+		slash_command: !1,
+		world_info: !1,
+		reasoning: !1
+	},
+	destination: {
+		display: !0,
+		prompt: !1
+	},
+	run_on_edit: !0,
+	min_depth: null,
+	max_depth: null
+};
+function cr(e, t) {
+	return t === 0 && e.id === sr.id && e.enabled === sr.enabled && e.find_regex === sr.find_regex && e.replace_string === sr.replace_string && e.source.ai_output === sr.source.ai_output && e.destination.display === sr.destination.display && e.destination.prompt === sr.destination.prompt && e.run_on_edit === sr.run_on_edit;
 }
-function sr(e) {
+async function lr() {
+	let e = { type: "global" }, t = getTavernRegexes(e), n = t.findIndex((e) => e.id === rr);
+	n >= 0 && cr(t[n], n) || await updateTavernRegexesWith((e) => [sr, ...e.filter((e) => e.id !== rr)], e);
+}
+function ur(e) {
 	let t = retrieveDisplayedMessage(e)[0];
 	return t && (t.matches(".mes_text") ? t : t.querySelector(".mes_text")) || null;
 }
-function cr(e) {
+function dr(e) {
 	Xn.get(e)?.(), Xn.delete(e);
 }
-function lr(e) {
-	let t = or(e);
+function fr(e) {
+	let t = ur(e);
 	if (!t) {
-		cr(e);
+		dr(e);
 		return;
 	}
-	let n = sr(e);
-	if (!n) {
-		cr(e);
-		return;
-	}
-	cr(e);
-	let r = t.querySelector(nr);
-	if (!r) return;
-	n.replaceChildren(...t.childNodes);
-	let i = fr(r);
-	i && Xn.set(e, i);
+	dr(e);
+	let n = t.querySelector(nr);
+	if (!n) return;
+	let r = hr(n);
+	r && Xn.set(e, r);
 }
-function ur() {
+function pr() {
 	let e = SillyTavern.chat.length;
-	for (let t = 0; t < e; t += 1) lr(t);
-	for (let t of Xn.keys()) t >= e && cr(t);
+	for (let t = 0; t < e; t += 1) fr(t);
+	for (let t of Xn.keys()) t >= e && dr(t);
 }
-function dr(e) {
+function mr(e) {
 	let t = document.createElement("div");
 	return t.replaceChildren(...e.childNodes), t;
 }
-function fr(e) {
-	let t = dr(e), n = Array.from(t.childNodes), r = y(t), i = document.createElement("div");
+function hr(e) {
+	let t = mr(e), n = Array.from(t.childNodes), r = y(t), i = document.createElement("div");
 	i.className = "cx-react-mount", e.appendChild(i);
 	let a = (0, g.createRoot)(i);
-	return a.render(/* @__PURE__ */ (0, M.jsx)(Yn, {
-		nodes: r,
-		contentHost: t
-	})), () => {
+	return (0, Ye.flushSync)(() => {
+		a.render(/* @__PURE__ */ (0, M.jsx)(Yn, {
+			nodes: r,
+			contentHost: t
+		}));
+	}), () => {
 		a.unmount(), i.parentElement === e && e.replaceChildren(...n);
 	};
 }
-function pr() {
-	ur();
+async function gr() {
 	let e = [
-		eventOn(tavern_events.CHAT_CHANGED, ur),
-		eventOn(tavern_events.MORE_MESSAGES_LOADED, ur),
-		eventOn(tavern_events.CHARACTER_MESSAGE_RENDERED, lr),
-		eventOn(tavern_events.MESSAGE_EDITED, lr),
-		eventOn(tavern_events.MESSAGE_UPDATED, lr)
+		eventOn(tavern_events.CHAT_CHANGED, pr),
+		eventOn(tavern_events.MORE_MESSAGES_LOADED, pr),
+		eventOn(tavern_events.CHARACTER_MESSAGE_RENDERED, fr),
+		eventOn(tavern_events.MESSAGE_EDITED, fr),
+		eventOn(tavern_events.MESSAGE_UPDATED, fr)
 	];
-	return () => {
+	return await lr(), pr(), () => {
 		e.forEach((e) => e.stop());
-		for (let e of Xn.keys()) cr(e);
+		for (let e of Xn.keys()) dr(e);
 	};
 }
 //#endregion
 //#region src/beautify/content-inject.ts
-var mr = {
+var _r = {
 	id: "cangxuanjie-content-format",
 	position: "in_chat",
 	depth: 0,
@@ -10619,9 +10634,9 @@ ${Qn}
 ${$n}
 `
 };
-function hr() {
+function vr() {
 	let e = null, t = () => {
-		e?.(), e = injectPrompts([mr]).uninject;
+		e?.(), e = injectPrompts([_r]).uninject;
 	};
 	t();
 	let n = [eventOn(tavern_events.CHAT_CHANGED, t)];
@@ -10631,10 +10646,13 @@ function hr() {
 }
 //#endregion
 //#region src/main.tsx
-var gr = "tavern-cangxuanjie-root", _r = "cangxuanjie-plugin-style", vr = null, yr = null, br = null, xr = null;
+var yr = "tavern-cangxuanjie-root", br = "cangxuanjie-plugin-style", xr = null, Sr = null, Cr = null, wr = null;
+async function Tr() {
+	$(`#${yr}`).remove(), Sr = $("<div>").attr("id", yr).appendTo("body")[0], xr = (0, g.createRoot)(Sr), toastr.success("苍玄界插件已加载"), $(`#${br}`).remove(), $("<style>").attr("id", br).text(_).appendTo("head"), Cr = vr(), wr = await gr();
+}
 $(() => {
-	$(`#${gr}`).remove(), yr = $("<div>").attr("id", gr).appendTo("body")[0], vr = (0, g.createRoot)(yr), toastr.success("苍玄界插件已加载"), $(`#${_r}`).remove(), $("<style>").attr("id", _r).text(_).appendTo("head"), br = hr(), xr = pr();
+	Tr();
 }), $(window).on("pagehide", () => {
-	vr?.unmount(), yr?.remove(), vr = null, yr = null, $(`#${_r}`).remove(), br?.(), br = null, xr?.(), xr = null;
+	xr?.unmount(), Sr?.remove(), xr = null, Sr = null, $(`#${br}`).remove(), Cr?.(), Cr = null, wr?.(), wr = null;
 });
 //#endregion
