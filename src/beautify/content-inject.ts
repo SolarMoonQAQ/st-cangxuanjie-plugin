@@ -1,7 +1,7 @@
 import {
     CONTENT_CLOSE_TAG,
     CONTENT_OPEN_TAG,
-} from '@/beautify/content-regex.ts'
+} from '@/beautify/content-runtime.tsx'
 
 const CONTENT_PROMPT_ID = 'cangxuanjie-content-format'
 
