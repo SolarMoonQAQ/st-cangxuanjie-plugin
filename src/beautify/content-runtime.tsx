@@ -5,56 +5,75 @@ import { CONTENT_HOST_CLASS, ensureContentDisplayRegex } from '@/beautify/conten
 
 type StopRender = () => void
 
-const renderStates = new Map<number, StopRender>()
+const CONTENT_HOST_SELECTOR = `.mes_text div.${CONTENT_HOST_CLASS}`
+const renderStates = new Map<HTMLElement, StopRender>()
 
-function findContentHost(messageId: number): HTMLElement | null {
-    const displayed = retrieveDisplayedMessage(messageId)[0] as HTMLElement | undefined
-
-    if (!displayed) return null
-
-    const mesText = displayed.matches('.mes_text')
-        ? displayed
-        : displayed.querySelector<HTMLElement>('.mes_text')
-
-    return mesText?.querySelector<HTMLElement>(`div.${CONTENT_HOST_CLASS}`) ?? null
-}
-
-function stopMessageRender(messageId: number) {
-    renderStates.get(messageId)?.()
-    renderStates.delete(messageId)
-}
-
-function renderOneMessage(messageId: number) {
-    const contentHost = findContentHost(messageId)
-
-    if (!contentHost) {
+function renderContentHost(contentHost: HTMLElement) {
+    if (renderStates.has(contentHost)) {
         return
     }
 
-    stopMessageRender(messageId)
-
     const stop = renderMessage(contentHost)
-
-    if (stop) {
-        renderStates.set(messageId, stop)
-    }
+    renderStates.set(contentHost, stop)
 }
 
-function renderAllMessages() {
-    const chatLength = SillyTavern.chat.length
-
-    for (let messageId = 0; messageId < chatLength; messageId += 1) {
-        renderOneMessage(messageId)
+function renderHostsInside(node: Node) {
+    if (node.nodeType !== 1) {
+        return
     }
 
-    for (const messageId of renderStates.keys()) {
-        if (messageId >= chatLength) {
-            stopMessageRender(messageId)
+    const element = node as HTMLElement
+
+    if (element.matches(CONTENT_HOST_SELECTOR)) {
+        renderContentHost(element)
+    }
+
+    element
+        .querySelectorAll<HTMLElement>(CONTENT_HOST_SELECTOR)
+        .forEach(renderContentHost)
+}
+
+function removeDisconnectedRenderStates() {
+    for (const [contentHost, stop] of renderStates) {
+        if (!contentHost.isConnected) {
+            stop()
+            renderStates.delete(contentHost)
         }
     }
 }
 
-function renderMessage(contentHost: HTMLElement) {
+function renderAllMessages(tavernDocument: Document) {
+    tavernDocument
+        .querySelectorAll<HTMLElement>(CONTENT_HOST_SELECTOR)
+        .forEach(renderContentHost)
+
+    removeDisconnectedRenderStates()
+}
+
+function observeContentHosts(tavernDocument: Document) {
+    const Observer = tavernDocument.defaultView?.MutationObserver
+
+    if (!Observer || !tavernDocument.body) {
+        throw new Error('无法观察酒馆聊天页面')
+    }
+
+    const observer = new Observer((mutations) => {
+        for (const mutation of mutations) {
+            mutation.addedNodes.forEach(renderHostsInside)
+        }
+
+        removeDisconnectedRenderStates()
+    })
+
+    observer.observe(tavernDocument.body, {
+        childList: true,
+        subtree: true,
+    })
+
+    return () => observer.disconnect()
+}
+
+function renderMessage(contentHost: HTMLElement): StopRender {
     const originalChildren = Array.from(contentHost.childNodes)
 
     const nodes = parseContent(contentHost)
@@ -78,22 +97,24 @@ function renderMessage(contentHost: HTMLElement) {
 }
 
 export async function startContentRender() {
-    await ensureContentDisplayRegex()
-    renderAllMessages()
+    const tavernDocument = window.parent.document
+    const stopObserving = observeContentHosts(tavernDocument)
 
-    const listeners = [
-        eventOn(tavern_events.CHAT_CHANGED, renderAllMessages),
-        eventOn(tavern_events.MORE_MESSAGES_LOADED, renderAllMessages),
-        eventOn(tavern_events.CHARACTER_MESSAGE_RENDERED, renderOneMessage),
-        eventOn(tavern_events.MESSAGE_EDITED, renderOneMessage),
-        eventOn(tavern_events.MESSAGE_UPDATED, renderOneMessage),
-    ]
+    try {
+        renderAllMessages(tavernDocument)
+        await ensureContentDisplayRegex()
+        renderAllMessages(tavernDocument)
+    } catch (error) {
+        stopObserving()
+        throw error
+    }
 
     return () => {
-        listeners.forEach((listener) => listener.stop())
+        stopObserving()
 
-        for (const messageId of renderStates.keys()) {
-            stopMessageRender(messageId)
+        for (const [contentHost, stop] of renderStates) {
+            stop()
+            renderStates.delete(contentHost)
         }
     }
 }
