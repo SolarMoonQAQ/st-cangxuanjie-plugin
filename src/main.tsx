@@ -12,23 +12,38 @@ let container: HTMLElement | null = null
 let stopInjectBeautifyPrompt: (() => void) | null = null
 let stopContentRender: (() => void) | null = null
 
-$(async () => {
+async function initializePlugin() {
     $(`#${CONTAINER_ID}`).remove()
 
     container = $('<div>').attr('id', CONTAINER_ID).appendTo('body')[0]
 
     root = createRoot(container)
 
-    toastr.success('苍玄界插件已加载')
-
     $(`#${STYLE_ID}`).remove()
+
     $('<style>').attr('id', STYLE_ID).text(pluginCss).appendTo('head')
 
     stopInjectBeautifyPrompt = injectBeautifyPrompt()
+
     stopContentRender = await startContentRender()
+
+    toastr.success('苍玄界插件已加载')
+}
+
+$(() => {
+    void initializePlugin().catch((error) => {
+        console.error('[苍玄界插件] 加载失败', error)
+        toastr.error('苍玄界插件加载失败')
+    })
 })
 
 $(window).on('pagehide', () => {
+    stopContentRender?.()
+    stopContentRender = null
+
+    stopInjectBeautifyPrompt?.()
+    stopInjectBeautifyPrompt = null
+
     root?.unmount()
     container?.remove()
 
@@ -36,8 +51,4 @@ $(window).on('pagehide', () => {
     container = null
 
     $(`#${STYLE_ID}`).remove()
-    stopInjectBeautifyPrompt?.()
-    stopInjectBeautifyPrompt = null
-    stopContentRender?.()
-    stopContentRender = null
 })

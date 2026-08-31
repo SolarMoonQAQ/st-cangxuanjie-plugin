@@ -3,7 +3,7 @@ import { createRoot } from 'react-dom/client'
 import Content from '@/beautify/Content.tsx'
 import { parseContent } from '@/beautify/content-parser.ts'
 import './index.css'
-import { CONTENT_TAG_NAME } from '@/beautify/content-runtime.tsx'
+import { CONTENT_TAG_NAME } from '@/beautify/content-regex.ts'
 
 const PREVIEW_TEXT = `
 药芷若顺从地任他牵着走出内室，绛红色的长裙在青砖地上拖出轻微的声响绛红色的长裙在青砖地上拖出轻微的声响绛红色的长裙在青砖地上拖出轻微的声响绛红色的长裙在青砖地上拖出轻微的声响。
