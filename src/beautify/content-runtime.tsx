@@ -30,28 +30,24 @@ function extractRawContent(messageId: number): string | null {
     return match?.[1].trim() ?? null
 }
 
+function createFormattedHolder(rawContent: string, messageId: number): HTMLDivElement {
+    const holder = document.createElement('div')
 
+    holder.innerHTML = formatAsDisplayedMessage(rawContent, {
+        message_id: messageId,
+    })
+
+    return holder
+}
 
 function findContentHost(messageId: number): HTMLElement | null {
     const displayed = retrieveDisplayedMessage(messageId)[0] as HTMLElement | undefined
 
-    if (!displayed) {
-        return null
-    }
+    if (!displayed) return null
 
-    const mesText = displayed.matches('.mes_text')
+    return displayed.matches('.mes_text')
         ? displayed
         : displayed.querySelector<HTMLElement>('.mes_text')
-
-    if (!mesText) {
-        return null
-    }
-
-    if (mesText.matches(CONTENT_TAG_NAME)) {
-        return mesText
-    }
-
-    return mesText.querySelector<HTMLElement>(CONTENT_TAG_NAME)
 }
 
 function stopMessageRender(messageId: number) {
@@ -96,7 +92,7 @@ function renderMessage(messageId: number, contentHost: HTMLElement) {
         return
     }
 
-    const holder = document.createElement('div')
+    const holder = createFormattedHolder(rawContent, messageId)
 
     const nodes = parseContent(holder)
 
