@@ -12,7 +12,7 @@ export const CONTENT_BLOCK_PATTERN = new RegExp(
 
 const contentDisplayRegex: TavernRegex = {
     id: CONTENT_DISPLAY_REGEX_ID,
-    script_name: '苍玄界-正文容器',
+    script_name: '🤖苍玄界-正文美化',
     enabled: true,
 
     find_regex: `/${CONTENT_BLOCK_PATTERN.source}/${CONTENT_BLOCK_PATTERN.flags}`,

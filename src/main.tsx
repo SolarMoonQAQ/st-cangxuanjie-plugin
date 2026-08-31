@@ -1,31 +1,24 @@
-import { createRoot, type Root } from 'react-dom/client'
 import pluginCss from './index.css?inline'
 import { injectBeautifyPrompt } from './beautify/content-inject.ts'
 import { startContentRender } from '@/beautify/content-runtime.tsx'
 import { removeContentDisplayRegex } from '@/beautify/content-regex.ts'
 
-const CONTAINER_ID = 'tavern-cangxuanjie-root'
 const STYLE_ID = 'cangxuanjie-plugin-style'
-
-let root: Root | null = null
-let container: HTMLElement | null = null
 
 let stopInjectBeautifyPrompt: (() => void) | null = null
 let stopContentRender: (() => void) | null = null
 
 async function initializePlugin() {
-    $(`#${CONTAINER_ID}`).remove()
+    const tavernDocument = window.parent.document
 
-    container = $('<div>').attr('id', CONTAINER_ID).appendTo('body')[0]
+    tavernDocument.getElementById(STYLE_ID)?.remove()
 
-    root = createRoot(container)
-
-    $(`#${STYLE_ID}`).remove()
-
-    $('<style>').attr('id', STYLE_ID).text(pluginCss).appendTo('head')
+    const style = tavernDocument.createElement('style')
+    style.id = STYLE_ID
+    style.textContent = pluginCss
+    tavernDocument.head.appendChild(style)
 
     stopInjectBeautifyPrompt = injectBeautifyPrompt()
-
     stopContentRender = await startContentRender()
 
     toastr.success('苍玄界插件已加载')
@@ -45,13 +38,7 @@ $(window).on('pagehide', () => {
     stopInjectBeautifyPrompt?.()
     stopInjectBeautifyPrompt = null
 
-    root?.unmount()
-    container?.remove()
+    void removeContentDisplayRegex()
 
-    root = null
-    container = null
-
-    removeContentDisplayRegex()
-
-    $(`#${STYLE_ID}`).remove()
+    window.parent.document.getElementById(STYLE_ID)?.remove()
 })

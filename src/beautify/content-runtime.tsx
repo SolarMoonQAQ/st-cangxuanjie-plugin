@@ -59,7 +59,7 @@ function renderMessage(contentHost: HTMLElement) {
 
     const nodes = parseContent(contentHost)
 
-    const mount = document.createElement('div')
+    const mount = contentHost.ownerDocument.createElement('div')
     mount.className = 'cx-react-mount'
 
     contentHost.replaceChildren(mount)
