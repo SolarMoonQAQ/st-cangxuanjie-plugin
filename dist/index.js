@@ -10527,26 +10527,38 @@ var qn = /* @__PURE__ */ o(((e) => {
 		}
 	}
 	n(), t.exports = Yn();
-})))(), Zn = "content", Qn = `<${Zn}>`, $n = `</${Zn}>`, er = `.mes_text ${Zn}`, tr = /* @__PURE__ */ new Map();
+})))(), Zn = "content", Qn = `<${Zn}>`, $n = `</${Zn}>`, er = ".mes_text", tr = /* @__PURE__ */ new Map();
 function nr(e) {
-	if (tr.has(e)) return;
-	let t = Array.from(e.childNodes), n = d(e), r = e.ownerDocument.createElement("div");
-	e.replaceChildren(r);
-	let i = (0, Xn.createRoot)(r);
-	i.render(/* @__PURE__ */ (0, j.jsx)(Kn, {
-		nodes: n,
+	let t = tr.get(e);
+	if (t?.mount.isConnected) return;
+	t && (t.stop(), tr.delete(e));
+	let n = Array.from(e.childNodes), r = d(e), i = e.ownerDocument.createElement("div");
+	e.replaceChildren(i);
+	let a = (0, Xn.createRoot)(i);
+	a.render(/* @__PURE__ */ (0, j.jsx)(Kn, {
+		nodes: r,
 		contentHost: e
-	})), tr.set(e, () => {
-		i.unmount(), e.isConnected && r.parentElement === e && e.replaceChildren(...t);
+	})), tr.set(e, {
+		mount: i,
+		stop: () => {
+			a.unmount(), e.isConnected && i.parentElement === e && e.replaceChildren(...n);
+		}
 	});
 }
 function rr(e) {
 	if (e.nodeType !== 1) return;
-	let t = e;
-	t.matches(er) && nr(t), t.querySelectorAll(er).forEach(nr);
+	let t = e, n = /* @__PURE__ */ new Set();
+	if (t.matches("content")) {
+		let e = t.closest(er);
+		e && n.add(e);
+	}
+	t.querySelectorAll(Zn).forEach((e) => {
+		let t = e.closest(er);
+		t && n.add(t);
+	}), n.forEach(nr);
 }
 function ir() {
-	for (let [e, t] of tr) e.isConnected || (t(), tr.delete(e));
+	for (let [e, t] of tr) e.isConnected && t.mount.isConnected || (t.stop(), tr.delete(e));
 }
 function ar() {
 	let e = window.parent.document, t = new MutationObserver((e) => {
@@ -10556,8 +10568,11 @@ function ar() {
 	return t.observe(e.body, {
 		childList: !0,
 		subtree: !0
-	}), e.querySelectorAll(er).forEach(nr), () => {
-		t.disconnect(), tr.forEach((e) => e()), tr.clear();
+	}), e.querySelectorAll(Zn).forEach((e) => {
+		let t = e.closest(er);
+		t && nr(t);
+	}), () => {
+		t.disconnect(), tr.forEach(({ stop: e }) => e()), tr.clear();
 	};
 }
 //#endregion

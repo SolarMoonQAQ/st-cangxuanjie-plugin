@@ -3,53 +3,73 @@ import Content from '@/beautify/Content.tsx'
 import { createRoot } from 'react-dom/client'
 
 type StopRender = () => void
+type RenderState = {
+    mount: HTMLElement
+    stop: StopRender
+}
 
 export const CONTENT_TAG_NAME = 'content'
 export const CONTENT_OPEN_TAG = `<${CONTENT_TAG_NAME}>`
 export const CONTENT_CLOSE_TAG = `</${CONTENT_TAG_NAME}>`
 
-const CONTENT_SELECTOR = `.mes_text ${CONTENT_TAG_NAME}`
-const renderStops = new Map<HTMLElement, StopRender>()
+const MESSAGE_SELECTOR = '.mes_text'
+const renderStates = new Map<HTMLElement, RenderState>()
 
-function renderContent(contentElement: HTMLElement) {
-    if (renderStops.has(contentElement)) return
+function renderMessage(messageElement: HTMLElement) {
+    const existing = renderStates.get(messageElement)
 
-    const originalChildren = Array.from(contentElement.childNodes)
-    const nodes = parseContent(contentElement)
-    const mount = contentElement.ownerDocument.createElement('div')
+    if (existing?.mount.isConnected) return
 
-    contentElement.replaceChildren(mount)
+    if (existing) {
+        existing.stop()
+        renderStates.delete(messageElement)
+    }
+
+    const originalChildren = Array.from(messageElement.childNodes)
+    const nodes = parseContent(messageElement)
+    const mount = messageElement.ownerDocument.createElement('div')
+
+    messageElement.replaceChildren(mount)
 
     const root = createRoot(mount)
-    root.render(<Content nodes={nodes} contentHost={contentElement} />)
+    root.render(<Content nodes={nodes} contentHost={messageElement} />)
 
-    renderStops.set(contentElement, () => {
+    const stop = () => {
         root.unmount()
 
-        if (contentElement.isConnected && mount.parentElement === contentElement) {
-            contentElement.replaceChildren(...originalChildren)
+        if (messageElement.isConnected && mount.parentElement === messageElement) {
+            messageElement.replaceChildren(...originalChildren)
         }
-    })
+    }
+
+    renderStates.set(messageElement, { mount, stop })
 }
 
-function renderContentInside(node: Node) {
+function renderMessagesMarkedInside(node: Node) {
     if (node.nodeType !== 1) return
 
     const element = node as HTMLElement
+    const messages = new Set<HTMLElement>()
 
-    if (element.matches(CONTENT_SELECTOR)) {
-        renderContent(element)
+    if (element.matches(CONTENT_TAG_NAME)) {
+        const message = element.closest<HTMLElement>(MESSAGE_SELECTOR)
+        if (message) messages.add(message)
     }
 
-    element.querySelectorAll<HTMLElement>(CONTENT_SELECTOR).forEach(renderContent)
+    element.querySelectorAll(CONTENT_TAG_NAME).forEach((contentElement) => {
+        const message = contentElement.closest<HTMLElement>(MESSAGE_SELECTOR)
+        if (message) messages.add(message)
+    })
+
+    messages.forEach(renderMessage)
 }
 
 function removeDisconnectedRenders() {
-    for (const [contentElement, stop] of renderStops) {
-        if (contentElement.isConnected) continue
+    for (const [messageElement, state] of renderStates) {
+        if (messageElement.isConnected && state.mount.isConnected) continue
 
-        stop()
-        renderStops.delete(contentElement)
+        state.stop()
+        renderStates.delete(messageElement)
     }
 }
 
@@ -58,7 +78,7 @@ export function startContentRender() {
 
     const observer = new MutationObserver((mutations) => {
         for (const mutation of mutations) {
-            mutation.addedNodes.forEach(renderContentInside)
+            mutation.addedNodes.forEach(renderMessagesMarkedInside)
         }
 
         removeDisconnectedRenders()
@@ -70,12 +90,15 @@ export function startContentRender() {
     })
 
     tavernDocument
-        .querySelectorAll<HTMLElement>(CONTENT_SELECTOR)
-        .forEach(renderContent)
+        .querySelectorAll(CONTENT_TAG_NAME)
+        .forEach((contentElement) => {
+            const message = contentElement.closest<HTMLElement>(MESSAGE_SELECTOR)
+            if (message) renderMessage(message)
+        })
 
     return () => {
         observer.disconnect()
-        renderStops.forEach((stop) => stop())
-        renderStops.clear()
+        renderStates.forEach(({ stop }) => stop())
+        renderStates.clear()
     }
 }
