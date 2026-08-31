@@ -37,6 +37,17 @@ type RenderState = {
 
 const renderStates = new Map<number, RenderState>()
 
+type PendingRender = {
+    firstFrame: number
+    secondFrame: number | null
+}
+
+// SillyTavern emits the message-rendered event while other extensions may
+// still be applying their post-processing/regex DOM transforms. Delay our
+// mutation until two paint cycles have completed, and coalesce duplicate
+// events for the same message.
+const pendingRenders = new Map<number, PendingRender>()
+
 export function injectBeautifyPrompt() {
     let uninject: (() => void) | null = null
 
@@ -138,8 +149,34 @@ function renderMessage(messageId: number) {
 
 function renderAll() {
     for (let messageId = 0; messageId < SillyTavern.chat.length; messageId++) {
-        renderMessage(messageId)
+        scheduleRenderMessage(messageId)
     }
+}
+
+function scheduleRenderMessage(messageId: number) {
+    const previous = pendingRenders.get(messageId)
+
+    if (previous) {
+        cancelAnimationFrame(previous.firstFrame)
+
+        if (previous.secondFrame !== null) {
+            cancelAnimationFrame(previous.secondFrame)
+        }
+    }
+
+    const pending: PendingRender = {
+        firstFrame: 0,
+        secondFrame: null,
+    }
+
+    pending.firstFrame = requestAnimationFrame(() => {
+        pending.secondFrame = requestAnimationFrame(() => {
+            pendingRenders.delete(messageId)
+            renderMessage(messageId)
+        })
+    })
+
+    pendingRenders.set(messageId, pending)
 }
 
 export function startContentRender() {
@@ -147,13 +184,22 @@ export function startContentRender() {
 
     const listeners = [
         eventOn(tavern_events.CHAT_CHANGED, renderAll),
-        eventOn(tavern_events.CHARACTER_MESSAGE_RENDERED, renderMessage),
-        eventOn(tavern_events.MESSAGE_EDITED, renderMessage),
-        eventOn(tavern_events.MESSAGE_UPDATED, renderMessage),
+        eventOn(tavern_events.CHARACTER_MESSAGE_RENDERED, scheduleRenderMessage),
+        eventOn(tavern_events.MESSAGE_EDITED, scheduleRenderMessage),
+        eventOn(tavern_events.MESSAGE_UPDATED, scheduleRenderMessage),
     ]
 
     return () => {
         listeners.forEach((listener) => listener.stop())
+
+        pendingRenders.forEach(({ firstFrame, secondFrame }) => {
+            cancelAnimationFrame(firstFrame)
+
+            if (secondFrame !== null) {
+                cancelAnimationFrame(secondFrame)
+            }
+        })
+        pendingRenders.clear()
 
         renderStates.forEach(({ root, contentHost, mount, originalHtml }) => {
             root.unmount()
