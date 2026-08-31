@@ -49,7 +49,7 @@ async function initializePlugin() {
     stopInjectBeautifyPrompt = injectBeautifyPrompt()
     console.info(`${DIAGNOSTIC_PREFIX} prompt-inject-started {}`)
 
-    stopContentRender = await startContentRender()
+    stopContentRender = await startContentRender(pluginCss)
     console.info(`${DIAGNOSTIC_PREFIX} initialize-complete {}`)
 
     toastr.success('苍玄界插件已加载')
@@ -76,7 +76,7 @@ $(window).on('pagehide', () => {
     root = null
     container = null
 
-    removeContentDisplayRegex()
+    void removeContentDisplayRegex()
 
-    $(`#${STYLE_ID}`).remove()
+    window.parent.document.getElementById(STYLE_ID)?.remove()
 })

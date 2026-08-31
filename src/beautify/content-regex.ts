@@ -1,4 +1,5 @@
 const CONTENT_DISPLAY_REGEX_ID = 'cangxuanjie-content-host'
+const DIAGNOSTIC_PREFIX = '[苍玄界诊断]'
 
 export const CONTENT_TAG_NAME = 'content'
 export const CONTENT_OPEN_TAG = `<${CONTENT_TAG_NAME}>`
@@ -46,14 +47,26 @@ const CONTENT_REGEX_SCOPE = {
 export async function ensureContentDisplayRegex() {
     const regexes = getTavernRegexes(CONTENT_REGEX_SCOPE)
     const existing = regexes.find((regex) => regex.id === contentDisplayRegex.id)
-
-    if (
+    const existingIsCurrent = Boolean(
         existing?.enabled &&
         existing.find_regex === contentDisplayRegex.find_regex &&
         existing.replace_string === contentDisplayRegex.replace_string &&
         existing.destination.display &&
-        !existing.destination.prompt
-    ) {
+        !existing.destination.prompt,
+    )
+
+    console.info(
+        `${DIAGNOSTIC_PREFIX} regex-state ${JSON.stringify({
+            characterRegexCount: regexes.length,
+            characterRegexEnabled: isCharacterTavernRegexesEnabled(),
+            exists: Boolean(existing),
+            existingIsCurrent,
+            index: regexes.findIndex((regex) => regex.id === contentDisplayRegex.id),
+        })}`,
+    )
+
+    if (existingIsCurrent) {
+        logRegexProbe()
         return
     }
 
@@ -63,6 +76,24 @@ export async function ensureContentDisplayRegex() {
             contentDisplayRegex,
         ],
         CONTENT_REGEX_SCOPE,
+    )
+
+    logRegexProbe()
+}
+
+function logRegexProbe() {
+    const input = '<content>probe</content>'
+    const output = formatAsTavernRegexedString(input, 'ai_output', 'display', {
+        depth: 0,
+    })
+
+    console.info(
+        `${DIAGNOSTIC_PREFIX} regex-probe ${JSON.stringify({
+            input,
+            output,
+            producedWrapper: output.includes(CONTENT_HOST_CLASS),
+            retainedContentTag: /<content\b/i.test(output),
+        })}`,
     )
 }
 
