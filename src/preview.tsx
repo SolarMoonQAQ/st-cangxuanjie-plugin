@@ -6,6 +6,8 @@ import './index.css'
 import { CONTENT_SELECTOR } from '@/beautify/content-runtime'
 
 const PREVIEW_TEXT = `
+药芷若顺从地任他牵着走出内室，绛红色的长裙在青砖地上拖出轻微的声响绛红色的长裙在青砖地上拖出轻微的声响绛红色的长裙在青砖地上拖出轻微的声响绛红色的长裙在青砖地上拖出轻微的声响。
+
 药芷若顺从地任他牵着走出内室，绛红色的长裙在青砖地上拖出轻微的声响。
 
 穿过西六宫的琉璃照壁，外面是一条宽阔的青石长廊。
