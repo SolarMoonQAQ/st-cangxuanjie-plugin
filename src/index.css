@@ -86,7 +86,4 @@
     .cx-narration {
         @apply py-2 text-(length:--cx-body-size) text-ink-heavy leading-relaxed;
     }
-    /*.cx-narration .cx-dom-slot > p {*/
-    /*    text-indent: 1em;*/
-    /*}*/
 }

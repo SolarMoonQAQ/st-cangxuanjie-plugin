@@ -9,18 +9,15 @@ const pendingMessageIds = new Set<number>()
 
 let flushTimer: number | null = null
 
-export const CONTENT_TAG_NAME = 'div'
-export const CONTENT_ATTRIBUTE = 'data-cx-content'
-export const CONTENT_SELECTOR = `${CONTENT_TAG_NAME}[${CONTENT_ATTRIBUTE}]`
-export const CONTENT_OPEN_TAG = `<${CONTENT_TAG_NAME} ${CONTENT_ATTRIBUTE}>`
+export const CONTENT_TAG_NAME = 'content'
+export const CONTENT_OPEN_TAG = `<${CONTENT_TAG_NAME}>`
 export const CONTENT_CLOSE_TAG = `</${CONTENT_TAG_NAME}>`
 function escapeRegExp(value: string): string {
     return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 }
 const tagName = escapeRegExp(CONTENT_TAG_NAME)
-const attribute = escapeRegExp(CONTENT_ATTRIBUTE)
 export const CONTENT_BLOCK_PATTERN = new RegExp(
-    `<${tagName}\\b[^>]*\\b${attribute}\\b[^>]*>` + `([\\s\\S]*?)` + `<\\/${tagName}>`,
+    String.raw`<${tagName}\b[^>]*>([\s\S]*?)</${tagName}>`,
     'i',
 )
 
@@ -61,11 +58,11 @@ function findContentHost(messageId: number): HTMLElement | null {
         return null
     }
 
-    if (mesText.matches(CONTENT_SELECTOR)) {
+    if (mesText.matches(CONTENT_TAG_NAME)) {
         return mesText
     }
 
-    return mesText.querySelector<HTMLElement>(CONTENT_SELECTOR)
+    return mesText.querySelector<HTMLElement>(CONTENT_TAG_NAME)
 }
 
 function stopMessageRender(messageId: number) {

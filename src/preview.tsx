@@ -3,7 +3,7 @@ import { createRoot } from 'react-dom/client'
 import Content from '@/beautify/Content.tsx'
 import { parseContent } from '@/beautify/content-parser.ts'
 import './index.css'
-import { CONTENT_SELECTOR } from '@/beautify/content-runtime'
+import { CONTENT_TAG_NAME } from '@/beautify/content-runtime.tsx'
 
 const PREVIEW_TEXT = `
 药芷若顺从地任他牵着走出内室，绛红色的长裙在青砖地上拖出轻微的声响绛红色的长裙在青砖地上拖出轻微的声响绛红色的长裙在青砖地上拖出轻微的声响绛红色的长裙在青砖地上拖出轻微的声响。
@@ -16,7 +16,7 @@ const PREVIEW_TEXT = `
 `
 
 function createPreviewContentHost(text: string): HTMLElement {
-    const host = document.createElement(CONTENT_SELECTOR)
+    const host = document.createElement(CONTENT_TAG_NAME)
 
     text.trim()
         .split(/\n{2,}/)

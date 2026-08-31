@@ -10524,61 +10524,61 @@ function Yn({ nodes: e, contentHost: t }) {
 }
 //#endregion
 //#region src/beautify/content-runtime.tsx
-var Xn = /* @__PURE__ */ new Map(), Zn = /* @__PURE__ */ new Set(), Qn = null, $n = "data-cx-content", er = `div[${$n}]`, tr = `<div ${$n}>`, nr = "</div>";
-function rr(e) {
+var Xn = /* @__PURE__ */ new Map(), Zn = /* @__PURE__ */ new Set(), Qn = null, $n = "content", er = `<${$n}>`, tr = `</${$n}>`;
+function nr(e) {
 	return e.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
-var ir = rr("div"), ar = rr($n), or = RegExp(`<${ir}\\b[^>]*\\b${ar}\\b[^>]*>([\\s\\S]*?)<\\/${ir}>`, "i");
-function sr(e) {
+var rr = nr($n), ir = new RegExp(String.raw`<${rr}\b[^>]*>([\s\S]*?)</${rr}>`, "i");
+function ar(e) {
 	let t = SillyTavern.chat[e]?.mes;
-	return typeof t == "string" ? t.match(or)?.[1].trim() ?? null : null;
+	return typeof t == "string" ? t.match(ir)?.[1].trim() ?? null : null;
 }
-function cr(e, t) {
+function or(e, t) {
 	let n = document.createElement("div");
 	return n.innerHTML = formatAsDisplayedMessage(e, { message_id: t }), n;
 }
-function lr(e) {
+function sr(e) {
 	let t = retrieveDisplayedMessage(e)[0];
 	if (!t) return null;
 	let n = t.matches(".mes_text") ? t : t.querySelector(".mes_text");
-	return n ? n.matches(er) ? n : n.querySelector(er) : null;
+	return n ? n.matches("content") ? n : n.querySelector($n) : null;
 }
-function ur(e) {
+function cr(e) {
 	Xn.get(e)?.(), Xn.delete(e);
 }
-function dr(e) {
-	let t = lr(e);
+function lr(e) {
+	let t = sr(e);
 	if (!t) return;
-	ur(e);
-	let n = gr(e, t);
+	cr(e);
+	let n = mr(e, t);
 	n && Xn.set(e, n);
 }
-function fr() {
+function ur() {
 	let e = SillyTavern.chat.length;
-	for (let t = 0; t < e; t += 1) dr(t);
-	for (let t of Xn.keys()) t >= e && ur(t);
+	for (let t = 0; t < e; t += 1) lr(t);
+	for (let t of Xn.keys()) t >= e && cr(t);
 }
-function pr() {
+function dr() {
 	Qn = null;
 	let e = [...Zn];
 	Zn.clear();
-	for (let t of e) dr(t);
+	for (let t of e) lr(t);
 }
-function mr(e) {
+function fr(e) {
 	Zn.add(e), Qn === null && (Qn = window.setTimeout(() => {
-		window.requestAnimationFrame(pr);
+		window.requestAnimationFrame(dr);
 	}, 0));
 }
-function hr() {
-	for (let e of Xn.keys()) ur(e);
+function pr() {
+	for (let e of Xn.keys()) cr(e);
 	Qn !== null && (window.clearTimeout(Qn), Qn = null), Zn.clear(), Qn = window.setTimeout(() => {
-		Qn = null, window.requestAnimationFrame(fr);
+		Qn = null, window.requestAnimationFrame(ur);
 	}, 0);
 }
-function gr(e, t) {
-	let n = sr(e);
+function mr(e, t) {
+	let n = ar(e);
 	if (!n) return;
-	let r = y(cr(n, e)), i = t.innerHTML, a = document.createElement("div");
+	let r = y(or(n, e)), i = t.innerHTML, a = document.createElement("div");
 	a.className = "cx-react-mount", t.replaceChildren(a);
 	let o = (0, g.createRoot)(a);
 	return o.render(/* @__PURE__ */ (0, M.jsx)(Yn, {
@@ -10588,24 +10588,24 @@ function gr(e, t) {
 		o.unmount(), t.isConnected && a.parentElement === t && (t.innerHTML = i);
 	};
 }
-function _r() {
-	fr();
+function hr() {
+	ur();
 	let e = [
-		eventOn(tavern_events.CHAT_CHANGED, hr),
-		eventOn(tavern_events.MORE_MESSAGES_LOADED, hr),
-		eventOn(tavern_events.CHARACTER_MESSAGE_RENDERED, mr),
-		eventOn(tavern_events.MESSAGE_EDITED, mr),
-		eventOn(tavern_events.MESSAGE_UPDATED, mr),
-		eventOn(tavern_events.MESSAGE_DELETED, hr)
+		eventOn(tavern_events.CHAT_CHANGED, pr),
+		eventOn(tavern_events.MORE_MESSAGES_LOADED, pr),
+		eventOn(tavern_events.CHARACTER_MESSAGE_RENDERED, fr),
+		eventOn(tavern_events.MESSAGE_EDITED, fr),
+		eventOn(tavern_events.MESSAGE_UPDATED, fr),
+		eventOn(tavern_events.MESSAGE_DELETED, pr)
 	];
 	return () => {
 		e.forEach((e) => e.stop()), Qn !== null && (window.clearTimeout(Qn), Qn = null), Zn.clear();
-		for (let e of Xn.keys()) ur(e);
+		for (let e of Xn.keys()) cr(e);
 	};
 }
 //#endregion
 //#region src/beautify/content-inject.ts
-var vr = {
+var gr = {
 	id: "cangxuanjie-content-format",
 	position: "in_chat",
 	depth: 0,
@@ -10614,21 +10614,21 @@ var vr = {
 	content: `
 输出时必须遵守以下格式：
 
-1. 所有面向用户展示的正文内容，包括旁白、动作、环境描写、角色对话，都必须放在唯一的一对 ${tr} 和 ${nr} 标签内。
-2. 除了 ${tr} ... ${nr} 外，不要输出任何正文内容。
+1. 所有面向用户展示的正文内容，包括旁白、动作、环境描写、角色对话，都必须放在唯一的一对 ${er} 和 ${tr} 标签内。
+2. 除了 ${er} ... ${tr} 外，不要输出任何正文内容。
 3. 不要遗漏标签，不要嵌套 content 标签。
 4. 不要把标签放进 Markdown 代码块中。
 
 格式示例：
 
-${tr}
+${er}
 这里是完整的正文内容。
-${nr}
+${tr}
 `
 };
-function yr() {
+function _r() {
 	let e = null, t = () => {
-		e?.(), e = injectPrompts([vr]).uninject;
+		e?.(), e = injectPrompts([gr]).uninject;
 	};
 	t();
 	let n = [eventOn(tavern_events.CHAT_CHANGED, t)];
@@ -10638,10 +10638,10 @@ function yr() {
 }
 //#endregion
 //#region src/main.tsx
-var br = "tavern-cangxuanjie-root", xr = "cangxuanjie-plugin-style", Sr = null, Cr = null, wr = null, Tr = null;
+var vr = "tavern-cangxuanjie-root", yr = "cangxuanjie-plugin-style", br = null, xr = null, Sr = null, Cr = null;
 $(() => {
-	$(`#${br}`).remove(), Cr = $("<div>").attr("id", br).appendTo("body")[0], Sr = (0, g.createRoot)(Cr), toastr.success("苍玄界插件已加载"), $(`#${xr}`).remove(), $("<style>").attr("id", xr).text(_).appendTo("head"), wr = yr(), Tr = _r();
+	$(`#${vr}`).remove(), xr = $("<div>").attr("id", vr).appendTo("body")[0], br = (0, g.createRoot)(xr), toastr.success("苍玄界插件已加载"), $(`#${yr}`).remove(), $("<style>").attr("id", yr).text(_).appendTo("head"), Sr = _r(), Cr = hr();
 }), $(window).on("pagehide", () => {
-	Sr?.unmount(), Cr?.remove(), Sr = null, Cr = null, $(`#${xr}`).remove(), wr?.(), wr = null, Tr?.(), Tr = null;
+	br?.unmount(), xr?.remove(), br = null, xr = null, $(`#${yr}`).remove(), Sr?.(), Sr = null, Cr?.(), Cr = null;
 });
 //#endregion
