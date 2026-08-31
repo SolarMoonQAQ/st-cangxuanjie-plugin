@@ -30,6 +30,16 @@ function extractRawContent(messageId: number): string | null {
     return match?.[1].trim() ?? null
 }
 
+function createFormattedHolder(rawContent: string, messageId: number): HTMLDivElement {
+    const holder = document.createElement('div')
+
+    holder.innerHTML = formatAsDisplayedMessage(rawContent, {
+        message_id: messageId,
+    })
+
+    return holder
+}
+
 function findContentHost(messageId: number): HTMLElement | null {
     const displayed = retrieveDisplayedMessage(messageId)[0] as HTMLElement | undefined
 
@@ -58,23 +68,15 @@ function stopMessageRender(messageId: number) {
 }
 
 function renderOneMessage(messageId: number) {
-    const rawContent = extractRawContent(messageId)
-
-    if (!rawContent) {
-        stopMessageRender(messageId)
-        return
-    }
-
     const contentHost = findContentHost(messageId)
 
     if (!contentHost) {
-        stopMessageRender(messageId)
         return
     }
 
     stopMessageRender(messageId)
 
-    const stop = renderMessage(contentHost)
+    const stop = renderMessage(messageId, contentHost)
 
     if (stop) {
         renderStates.set(messageId, stop)
@@ -95,38 +97,33 @@ function renderAllMessages() {
     }
 }
 
-/**
- * 移动 `<content>` 内由酒馆和其他正则生成的真实 DOM 节点。
- * `<content>` 外的内容继续留给酒馆原样渲染。
- */
-function createRenderedSource(contentHost: HTMLElement) {
-    const holder = document.createElement('div')
+function renderMessage(messageId: number, contentHost: HTMLElement) {
+    const rawContent = extractRawContent(messageId)
 
-    holder.replaceChildren(...contentHost.childNodes)
+    if (!rawContent) {
+        return
+    }
 
-    return holder
-}
-
-function renderMessage(contentHost: HTMLElement) {
-    const holder = createRenderedSource(contentHost)
-    const sourceNodes = Array.from(holder.childNodes)
+    const holder = createFormattedHolder(rawContent, messageId)
 
     const nodes = parseContent(holder)
+
+    const originalHtml = contentHost.innerHTML
 
     const mount = document.createElement('div')
     mount.className = 'cx-react-mount'
 
-    contentHost.appendChild(mount)
+    contentHost.replaceChildren(mount)
 
     const root = createRoot(mount)
 
-    root.render(<Content nodes={nodes} contentHost={holder} />)
+    root.render(<Content nodes={nodes} contentHost={contentHost} />)
 
     return () => {
         root.unmount()
 
-        if (mount.parentElement === contentHost) {
-            contentHost.replaceChildren(...sourceNodes)
+        if (contentHost.isConnected && mount.parentElement === contentHost) {
+            contentHost.innerHTML = originalHtml
         }
     }
 }

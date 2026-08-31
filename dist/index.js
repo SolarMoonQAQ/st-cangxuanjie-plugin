@@ -10533,61 +10533,56 @@ function rr(e) {
 	let t = SillyTavern.chat[e]?.mes;
 	return typeof t == "string" ? t.match(nr)?.[1].trim() ?? null : null;
 }
-function ir(e) {
+function ir(e, t) {
+	let n = document.createElement("div");
+	return n.innerHTML = formatAsDisplayedMessage(e, { message_id: t }), n;
+}
+function ar(e) {
 	let t = retrieveDisplayedMessage(e)[0];
 	if (!t) return null;
 	let n = t.matches(".mes_text") ? t : t.querySelector(".mes_text");
 	return n ? n.matches("content") ? n : n.querySelector(Zn) : null;
 }
-function ar(e) {
+function or(e) {
 	Xn.get(e)?.(), Xn.delete(e);
 }
-function or(e) {
-	if (!rr(e)) {
-		ar(e);
-		return;
-	}
-	let t = ir(e);
-	if (!t) {
-		ar(e);
-		return;
-	}
-	ar(e);
-	let n = lr(t);
+function sr(e) {
+	let t = ar(e);
+	if (!t) return;
+	or(e);
+	let n = lr(e, t);
 	n && Xn.set(e, n);
 }
-function sr() {
+function cr() {
 	let e = SillyTavern.chat.length;
-	for (let t = 0; t < e; t += 1) or(t);
-	for (let t of Xn.keys()) t >= e && ar(t);
+	for (let t = 0; t < e; t += 1) sr(t);
+	for (let t of Xn.keys()) t >= e && or(t);
 }
-function cr(e) {
-	let t = document.createElement("div");
-	return t.replaceChildren(...e.childNodes), t;
-}
-function lr(e) {
-	let t = cr(e), n = Array.from(t.childNodes), r = y(t), i = document.createElement("div");
-	i.className = "cx-react-mount", e.appendChild(i);
-	let a = (0, g.createRoot)(i);
-	return a.render(/* @__PURE__ */ (0, M.jsx)(Yn, {
+function lr(e, t) {
+	let n = rr(e);
+	if (!n) return;
+	let r = y(ir(n, e)), i = t.innerHTML, a = document.createElement("div");
+	a.className = "cx-react-mount", t.replaceChildren(a);
+	let o = (0, g.createRoot)(a);
+	return o.render(/* @__PURE__ */ (0, M.jsx)(Yn, {
 		nodes: r,
 		contentHost: t
 	})), () => {
-		a.unmount(), i.parentElement === e && e.replaceChildren(...n);
+		o.unmount(), t.isConnected && a.parentElement === t && (t.innerHTML = i);
 	};
 }
 function ur() {
-	sr();
+	cr();
 	let e = [
-		eventOn(tavern_events.CHAT_CHANGED, sr),
-		eventOn(tavern_events.MORE_MESSAGES_LOADED, sr),
-		eventOn(tavern_events.CHARACTER_MESSAGE_RENDERED, or),
-		eventOn(tavern_events.MESSAGE_EDITED, or),
-		eventOn(tavern_events.MESSAGE_UPDATED, or)
+		eventOn(tavern_events.CHAT_CHANGED, cr),
+		eventOn(tavern_events.MORE_MESSAGES_LOADED, cr),
+		eventOn(tavern_events.CHARACTER_MESSAGE_RENDERED, sr),
+		eventOn(tavern_events.MESSAGE_EDITED, sr),
+		eventOn(tavern_events.MESSAGE_UPDATED, sr)
 	];
 	return () => {
 		e.forEach((e) => e.stop());
-		for (let e of Xn.keys()) ar(e);
+		for (let e of Xn.keys()) or(e);
 	};
 }
 //#endregion
