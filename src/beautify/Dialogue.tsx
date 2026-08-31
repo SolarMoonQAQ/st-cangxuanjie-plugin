@@ -5,7 +5,7 @@ import YinSeal from '@/beautify/YinSeal.tsx'
 
 type DialogueProps = {
     speaker: string
-    content?: string
+    content: string
 }
 
 export default function Dialogue({ speaker, content }: DialogueProps) {
