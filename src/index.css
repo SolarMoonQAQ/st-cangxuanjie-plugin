@@ -18,14 +18,14 @@
 
 :root {
     /* 酒馆自身的基础字号 */
-    --cx-st-font-size: var(--mainFontSize, 15px);
+    --st-font-size: var(--mainFontSize, 15px);
 
-    /* 插件整体缩放比例 */
     --cx-font-scale: 1;
 
-    /* 插件最终字号 */
+    --cx-dialogue-header-height: calc(var(--st-font-size) * 2.5);
+
     --cx-body-size: calc(
-            var(--cx-st-font-size) * var(--cx-font-scale) * 1.15
+            var(--st-font-size) * var(--cx-font-scale) * 1.15
     );
 
     --cx-dialogue-size: calc(

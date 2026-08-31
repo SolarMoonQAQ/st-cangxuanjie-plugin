@@ -15,13 +15,13 @@ export default function Dialogue({ speaker, content }: DialogueProps) {
 
     return (
         <div className="flex cx-dialogue">
-            <Avatar className="h-10 w-10 shrink-0 cx-avatar">
+            <Avatar className="h-(--cx-dialogue-header-height) w-(--cx-dialogue-header-height) shrink-0 cx-avatar">
                 <AvatarImage src={profile.avatar} alt={`${speaker}头像`} />
                 <AvatarFallback>👤</AvatarFallback>
             </Avatar>
 
-            <div className="flex flex-col items-center shrink-0 ml-2!">
-                <div className="flex items-center h-10">
+            <div className="flex flex-col items-center shrink-0 ml-1.5!">
+                <div className="flex items-center h-(--cx-dialogue-header-height)">
                     <span className="cx-dialogue-name-head">{nameHead}</span>
                 </div>
 
@@ -29,7 +29,7 @@ export default function Dialogue({ speaker, content }: DialogueProps) {
             </div>
 
             <div className="flex flex-col flex-1">
-                <div className="flex items-center h-10">
+                <div className="flex items-center h-(--cx-dialogue-header-height)">
                     <span className="cx-dialogue-name">{nameTail}</span>
                 </div>
 
@@ -37,9 +37,7 @@ export default function Dialogue({ speaker, content }: DialogueProps) {
                     <span>
                         <YinSeal text={nameHead}></YinSeal>
                     </span>
-                    <text className="cx-dialogue-content">
-                        {content}
-                    </text>
+                    <text className="cx-dialogue-content">{content}</text>
                 </div>
             </div>
         </div>

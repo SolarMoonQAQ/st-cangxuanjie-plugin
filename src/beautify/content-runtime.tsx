@@ -9,7 +9,8 @@ const pendingMessageIds = new Set<number>()
 
 let flushTimer: number | null = null
 
-const CONTENT_BLOCK_PATTERN = /<content\b[^>]*>([\s\S]*?)<\/content>/i
+const CONTENT_BLOCK_PATTERN = /<cx-content\b[^>]*>([\s\S]*?)<\/cx-content>/i
+const CONTENT_SELECTOR = 'cx-content'
 
 function extractRawContent(messageId: number): string | null {
     const message = SillyTavern.chat[messageId]?.mes
@@ -48,11 +49,11 @@ function findContentHost(messageId: number): HTMLElement | null {
         return null
     }
 
-    if (mesText.matches('content')) {
+    if (mesText.matches(CONTENT_SELECTOR)) {
         return mesText
     }
 
-    return mesText.querySelector<HTMLElement>('content')
+    return mesText.querySelector<HTMLElement>(CONTENT_SELECTOR)
 }
 
 function stopMessageRender(messageId: number) {
