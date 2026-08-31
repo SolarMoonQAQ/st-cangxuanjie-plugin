@@ -30,15 +30,7 @@ function extractRawContent(messageId: number): string | null {
     return match?.[1].trim() ?? null
 }
 
-function createFormattedHolder(rawContent: string, messageId: number): HTMLDivElement {
-    const holder = document.createElement('div')
 
-    holder.innerHTML = formatAsDisplayedMessage(rawContent, {
-        message_id: messageId,
-    })
-
-    return holder
-}
 
 function findContentHost(messageId: number): HTMLElement | null {
     const displayed = retrieveDisplayedMessage(messageId)[0] as HTMLElement | undefined
@@ -104,7 +96,7 @@ function renderMessage(messageId: number, contentHost: HTMLElement) {
         return
     }
 
-    const holder = createFormattedHolder(rawContent, messageId)
+    const holder = document.createElement('div')
 
     const nodes = parseContent(holder)
 
