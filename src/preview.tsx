@@ -16,7 +16,8 @@ const PREVIEW_TEXT = `
 `
 
 function createPreviewContentHost(text: string): HTMLElement {
-    const host = document.createElement(CONTENT_TAG_NAME)
+    const host = document.createElement('div')
+    host.setAttribute(CONTENT_TAG_NAME, '')
 
     text.trim()
         .split(/\n{2,}/)
