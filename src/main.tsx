@@ -2,6 +2,7 @@ import { createRoot, type Root } from 'react-dom/client'
 import pluginCss from './index.css?inline'
 import { injectBeautifyPrompt } from './beautify/content-inject.ts'
 import { startContentRender } from '@/beautify/content-runtime.tsx'
+import { removeContentDisplayRegex } from '@/beautify/content-regex.ts'
 
 const CONTAINER_ID = 'tavern-cangxuanjie-root'
 const STYLE_ID = 'cangxuanjie-plugin-style'
@@ -49,6 +50,8 @@ $(window).on('pagehide', () => {
 
     root = null
     container = null
+
+    removeContentDisplayRegex()
 
     $(`#${STYLE_ID}`).remove()
 })

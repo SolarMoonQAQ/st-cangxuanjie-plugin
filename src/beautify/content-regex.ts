@@ -1,6 +1,9 @@
+const CONTENT_DISPLAY_REGEX_ID = 'cangxuanjie-content-host'
+
 export const CONTENT_TAG_NAME = 'content'
 export const CONTENT_OPEN_TAG = `<${CONTENT_TAG_NAME}>`
 export const CONTENT_CLOSE_TAG = `</${CONTENT_TAG_NAME}>`
+export const CONTENT_HOST_CLASS = 'cx-content-host'
 
 export const CONTENT_BLOCK_PATTERN = new RegExp(
     String.raw`<${CONTENT_TAG_NAME}\b[^>]*>([\s\S]*?)</${CONTENT_TAG_NAME}>`,
@@ -8,12 +11,12 @@ export const CONTENT_BLOCK_PATTERN = new RegExp(
 )
 
 const contentDisplayRegex: TavernRegex = {
-    id: 'cangxuanjie-content-host',
+    id: CONTENT_DISPLAY_REGEX_ID,
     script_name: '苍玄界-正文容器',
     enabled: true,
 
-    find_regex: CONTENT_BLOCK_PATTERN.source,
-    replace_string: '<div class="cx-content-host" markdown="1">$1</div>',
+    find_regex: `/${CONTENT_BLOCK_PATTERN.source}/${CONTENT_BLOCK_PATTERN.flags}`,
+    replace_string: `<div class="${CONTENT_HOST_CLASS}" markdown="1">$1</div>`,
 
     trim_strings: [],
 
@@ -59,6 +62,19 @@ export async function ensureContentDisplayRegex() {
             ...current.filter((regex) => regex.id !== contentDisplayRegex.id),
             contentDisplayRegex,
         ],
+        CONTENT_REGEX_SCOPE,
+    )
+}
+
+export async function removeContentDisplayRegex() {
+    const regexes = getTavernRegexes(CONTENT_REGEX_SCOPE)
+
+    if (!regexes.some((regex) => regex.id === CONTENT_DISPLAY_REGEX_ID)) {
+        return
+    }
+
+    await updateTavernRegexesWith(
+        (current) => current.filter((regex) => regex.id !== CONTENT_DISPLAY_REGEX_ID),
         CONTENT_REGEX_SCOPE,
     )
 }

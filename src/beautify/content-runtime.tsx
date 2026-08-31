@@ -1,7 +1,7 @@
 import { parseContent } from '@/beautify/content-parser.ts'
 import { createRoot } from 'react-dom/client'
 import Content from '@/beautify/Content.tsx'
-import { ensureContentDisplayRegex } from '@/beautify/content-regex.ts'
+import { CONTENT_HOST_CLASS, ensureContentDisplayRegex } from '@/beautify/content-regex.ts'
 
 type StopRender = () => void
 
@@ -16,7 +16,7 @@ function findContentHost(messageId: number): HTMLElement | null {
         ? displayed
         : displayed.querySelector<HTMLElement>('.mes_text')
 
-    return mesText?.querySelector<HTMLElement>('.cx-content-host') ?? null
+    return mesText?.querySelector<HTMLElement>(`div.${CONTENT_HOST_CLASS}`) ?? null
 }
 
 function stopMessageRender(messageId: number) {
@@ -24,7 +24,7 @@ function stopMessageRender(messageId: number) {
     renderStates.delete(messageId)
 }
 
-async function renderOneMessage(messageId: number) {
+function renderOneMessage(messageId: number) {
     const contentHost = findContentHost(messageId)
 
     if (!contentHost) {
@@ -36,15 +36,15 @@ async function renderOneMessage(messageId: number) {
     const stop = renderMessage(contentHost)
 
     if (stop) {
-        renderStates.set(messageId, await stop)
+        renderStates.set(messageId, stop)
     }
 }
 
-async function renderAllMessages() {
+function renderAllMessages() {
     const chatLength = SillyTavern.chat.length
 
     for (let messageId = 0; messageId < chatLength; messageId += 1) {
-        await renderOneMessage(messageId)
+        renderOneMessage(messageId)
     }
 
     for (const messageId of renderStates.keys()) {
@@ -54,9 +54,7 @@ async function renderAllMessages() {
     }
 }
 
-async function renderMessage(contentHost: HTMLElement) {
-    await ensureContentDisplayRegex()
-
+function renderMessage(contentHost: HTMLElement) {
     const originalChildren = Array.from(contentHost.childNodes)
 
     const nodes = parseContent(contentHost)
@@ -80,7 +78,8 @@ async function renderMessage(contentHost: HTMLElement) {
 }
 
 export async function startContentRender() {
-    await renderAllMessages()
+    await ensureContentDisplayRegex()
+    renderAllMessages()
 
     const listeners = [
         eventOn(tavern_events.CHAT_CHANGED, renderAllMessages),
