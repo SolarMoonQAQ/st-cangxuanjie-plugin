@@ -1,0 +1,555 @@
+@layer components {
+    .ws-module-card-shadow {
+        --ws-module-rotation: 0deg;
+        --ws-module-edge: inset(0);
+
+        @apply relative
+        w-[min(96%,448px)]
+        shrink-0;
+
+        aspect-ratio: 1.618 / 1;
+        transform: rotate(var(--ws-module-rotation));
+
+        filter: drop-shadow(0 1px 1px rgb(55 34 17 / 22%))
+            drop-shadow(4px 6px 5px rgb(35 20 10 / 28%))
+            drop-shadow(7px 10px 10px rgb(28 16 8 / 14%));
+    }
+
+    .ws-module-card {
+        @apply relative
+        w-full h-full
+        overflow-hidden
+        rounded-[2px]!
+        ring-0!;
+
+        box-sizing: border-box;
+        padding: 30px 18px 18px !important;
+        isolation: isolate;
+        clip-path: var(--ws-module-edge);
+
+        color: #3b2b20;
+        border: 1px solid rgb(128 91 49 / 30%);
+        background-color: #f4e7c5 !important;
+        background-image:
+            radial-gradient(circle at 18% 12%, rgb(255 255 255 / 34%), transparent 27%),
+            radial-gradient(circle at 82% 78%, rgb(112 70 31 / 10%), transparent 36%),
+            linear-gradient(102deg, rgb(255 249 229 / 25%), rgb(205 169 105 / 12%)),
+            url('../assets/textures/rice-paper.png');
+        background-repeat: no-repeat, no-repeat, no-repeat, repeat;
+        background-size: cover, cover, cover, auto;
+        background-blend-mode: screen, multiply, multiply, normal;
+
+        box-shadow:
+            inset 0 0 22px rgb(94 58 26 / 14%),
+            inset 0 0 3px rgb(83 47 17 / 18%);
+    }
+
+    .ws-module-content {
+        display: flex;
+        min-width: 0;
+        min-height: 0;
+        flex: 1 1 auto;
+        align-items: stretch;
+        gap: 18px;
+    }
+
+    /* 卡片顶边正中央的圆头钉；无图时仍保留为黑铁钉。 */
+    .ws-module-card-pin {
+        position: absolute;
+        top: 4px;
+        left: 50%;
+        z-index: 8;
+        transform: translateX(-50%);
+        pointer-events: none;
+
+        width: 14px;
+        height: 14px;
+        border-radius: 9999px;
+        border: 1px solid #68171d;
+
+        background: radial-gradient(circle at 38% 32%, #ce6264 0 16%, #a72d34 44%, #761a22 100%);
+
+        box-shadow:
+            inset -1px -2px 2px rgb(67 8 14 / 32%),
+            0 2px 3px rgb(48 24 14 / 38%);
+    }
+
+    .ws-module-card-pin::after {
+        content: '';
+        position: absolute;
+        top: 2px;
+        left: 2px;
+
+        width: 3px;
+        height: 3px;
+        border-radius: 9999px;
+
+        background-color: rgb(255 228 218 / 62%);
+    }
+
+    .ws-module-card-pin.is-empty {
+        border-color: #161616;
+        background: radial-gradient(circle at 38% 32%, #787878 0 15%, #363636 43%, #111 100%);
+        box-shadow:
+            inset -1px -2px 2px rgb(0 0 0 / 48%),
+            0 2px 3px rgb(35 24 17 / 34%);
+    }
+
+    .ws-module-card-pin.is-empty::after {
+        background-color: rgb(255 255 255 / 38%);
+    }
+
+    .ws-catalog {
+        width: 100%;
+        min-width: 0;
+        overflow-x: visible;
+    }
+
+    .ws-module-page {
+        width: 100%;
+        grid-area: 1 / 1;
+        will-change: transform;
+        backface-visibility: hidden;
+    }
+
+    .ws-module-stage {
+        display: grid;
+        width: calc(100% + var(--c-card-content-left, 20px) + var(--c-card-content-right, 38px));
+        margin-left: calc(var(--c-card-content-left, 20px) * -1);
+        overflow: visible;
+    }
+
+    .ws-module-list {
+        display: flex;
+        width: 100%;
+        flex-direction: column;
+        align-items: center;
+        gap: 24px;
+        box-sizing: border-box;
+        padding-right: var(--c-card-content-right, 38px);
+        padding-left: var(--c-card-content-left, 20px);
+    }
+
+    .ws-module-card-heading {
+        min-width: 0;
+    }
+
+    .ws-module-body {
+        display: flex;
+        min-width: 0;
+        min-height: 0;
+        flex: 1 1 auto;
+        flex-direction: column;
+        padding: 2px 0;
+    }
+
+    .ws-module-kind {
+        display: inline-block;
+        margin-bottom: 5px;
+        padding: 2px 7px;
+        color: #7c1823;
+        border: 1px solid rgb(124 24 35 / 36%);
+        border-radius: 2px;
+        background-color: rgb(255 250 235 / 42%);
+        font-size: 11px;
+        line-height: 1.3;
+        letter-spacing: 0.08em;
+    }
+
+    .ws-module-title {
+        display: -webkit-box;
+        margin: 0;
+        overflow: hidden;
+        color: #302117;
+        font-family: var(--zhimangxing), 'STKaiti', 'KaiTi', serif;
+        font-size: 28px;
+        font-weight: 600;
+        line-height: 1.1;
+        text-shadow: 0 1px 1px rgb(255 255 255 / 45%);
+        -webkit-box-orient: vertical;
+        -webkit-line-clamp: 2;
+    }
+
+    .ws-module-photo {
+        position: relative;
+        z-index: 1;
+        min-width: 0;
+        min-height: 0;
+        flex: 0 0 40%;
+        overflow: visible;
+        box-sizing: border-box;
+        margin-top: -14px;
+        padding: 5px;
+        transform: rotate(-0.7deg);
+        border: 1px solid rgb(105 67 37 / 28%);
+        border-radius: 2px;
+        background-color: #f8efd9;
+        box-shadow:
+            1px 2px 5px rgb(55 32 16 / 25%),
+            inset 0 0 0 1px rgb(255 255 255 / 38%);
+    }
+
+    .ws-module-photo.is-empty {
+        border-color: transparent;
+        background: transparent;
+        box-shadow: none;
+    }
+
+    .ws-module-kind-seal {
+        position: absolute !important;
+        top: 12px;
+        right: 10px;
+        left: auto;
+        z-index: 20;
+        margin: 0 !important;
+        padding: 5px 10px !important;
+        font-size: 18px !important;
+        line-height: 1 !important;
+        letter-spacing: 0.12em;
+        white-space: nowrap;
+        pointer-events: none;
+    }
+
+    .ws-module-preview {
+        display: block;
+        width: 100%;
+        height: 100%;
+        border-radius: 1px;
+        object-fit: contain;
+        object-position: center;
+    }
+
+    .ws-module-photo-fallback {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: min(72%, 130px);
+        aspect-ratio: 1;
+        display: grid;
+        place-items: center;
+        box-sizing: border-box;
+        transform: translate(-50%, -50%) rotate(-2deg);
+        border: 3px solid rgb(66 39 19 / 72%);
+        border-radius: 47% 53% 52% 48% / 52% 47% 53% 48%;
+        box-shadow:
+            inset 0 0 0 1px rgb(66 39 19 / 14%),
+            0 0 0 2px rgb(66 39 19 / 8%),
+            0 2px 4px rgb(55 32 16 / 12%);
+    }
+
+    .ws-module-photo-fallback-char {
+        font-family: var(--zhimangxing), 'STKaiti', 'KaiTi', serif;
+        font-size: 98px;
+        line-height: 1;
+        color: #3b2415;
+        text-shadow: 0 1px 0 rgb(255 255 255 / 38%);
+    }
+
+    .ws-module-description {
+        display: -webkit-box;
+        margin: 10px 0 0;
+        min-height: 0;
+        flex: 1 1 auto;
+        overflow: hidden;
+        color: #4d3a2c;
+        font-size: 14px;
+        line-height: 1.65;
+        text-overflow: ellipsis;
+        -webkit-box-orient: vertical;
+        -webkit-line-clamp: 6;
+    }
+
+    .ws-module-tags {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 5px;
+        margin-top: 10px;
+    }
+
+    .ws-module-tags > span {
+        padding: 1px 6px;
+        color: #71533d;
+        border-radius: 9999px;
+        background-color: rgb(113 83 61 / 10%);
+        font-size: 11px;
+    }
+
+    .ws-module-footer {
+        display: flex;
+        justify-content: space-between;
+        gap: 10px;
+        margin-top: auto;
+        padding-top: 14px;
+        color: #765b45;
+        font-size: 12px;
+    }
+
+    .ws-module-footer > span {
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .ws-module-footer > span:first-child {
+        flex: 1 1 auto;
+    }
+
+    .ws-module-footer > span:last-child {
+        flex: 0 0 auto;
+    }
+
+    .ws-catalog-state {
+        display: grid;
+        min-height: 180px;
+        place-items: center;
+        color: #644a35;
+        text-align: center;
+    }
+
+    .ws-catalog-error {
+        align-content: center;
+        gap: 10px;
+    }
+
+    .ws-catalog-error > p {
+        margin: 0;
+    }
+
+    .ws-retry-button {
+        color: #fff8ed;
+        border: 1px solid #68171d;
+        border-radius: 2px;
+        background-color: #8f252d !important;
+        box-shadow: 0 2px 3px rgb(48 24 14 / 22%);
+    }
+
+    .ws-retry-button:hover {
+        background-color: #7c1823 !important;
+    }
+
+    .ws-pagination {
+        margin: 0;
+        color: #5d4533;
+        font-size: 12px;
+    }
+
+    .ws-pagination [data-slot='pagination-content'] {
+        flex-wrap: nowrap;
+        justify-content: center;
+        margin: 0;
+        padding: 0;
+        list-style: none;
+    }
+
+    .ws-pagination [data-slot='pagination-item'] {
+        margin: 0;
+        padding: 0;
+        list-style: none;
+    }
+
+    .ws-pagination [data-slot='pagination-item']::marker {
+        content: '';
+    }
+
+    .ws-pagination-pages-item {
+        width: 196px;
+        height: 36px;
+        overflow: hidden;
+    }
+
+    .ws-pagination-window {
+        position: relative;
+        isolation: isolate;
+        width: 196px;
+        height: 36px;
+        overflow: hidden;
+    }
+
+    .ws-pagination-track {
+        position: relative;
+        z-index: 1;
+        display: flex;
+        width: max-content;
+        height: 36px;
+        gap: 4px;
+        margin: 0;
+        padding: 0 80px;
+        list-style: none;
+        will-change: transform;
+    }
+
+    .ws-pagination-track-item {
+        width: 36px;
+        height: 36px;
+        flex: 0 0 36px;
+        margin: 0;
+        padding: 0;
+        list-style: none;
+    }
+
+    .ws-pagination-track-item::marker {
+        content: '';
+    }
+
+    .ws-pagination [data-slot='pagination-link'] {
+        position: relative;
+        isolation: isolate;
+        overflow: hidden;
+        color: #654a36;
+        border-radius: 2px;
+        transition: color 160ms ease;
+    }
+
+    .ws-pagination [data-slot='pagination-link']:hover {
+        color: #68171d;
+        background-color: rgb(143 37 45 / 10%);
+    }
+
+    .ws-pagination [data-slot='pagination-link'][data-active='true'] {
+        color: #fff8ed;
+        border-color: transparent;
+        background-color: transparent;
+    }
+
+    .ws-pagination [data-slot='pagination-link'][data-active='true']:hover {
+        color: #fff8ed;
+        background-color: transparent;
+    }
+
+    .ws-pagination .ws-pagination-page {
+        border-radius: 9999px;
+    }
+
+    .ws-pagination .ws-pagination-page,
+    .ws-pagination .ws-pagination-page:hover,
+    .ws-pagination .ws-pagination-page:focus,
+    .ws-pagination .ws-pagination-page:focus-visible,
+    .ws-pagination .ws-pagination-page:active {
+        outline: none !important;
+        border-color: transparent !important;
+        background-color: transparent !important;
+        box-shadow: none !important;
+    }
+
+    .ws-pagination-active {
+        position: absolute;
+        top: 2px;
+        left: 50%;
+        z-index: 0;
+        width: 32px;
+        height: 32px;
+        box-sizing: border-box;
+        transform: translateX(-50%);
+        border: 1px solid #68171d;
+        border-radius: 9999px;
+        background-color: #8f252d;
+        box-shadow: inset 0 1px 0 rgb(255 235 225 / 18%);
+    }
+
+    .ws-pagination-number {
+        position: relative;
+        z-index: 1;
+    }
+
+    .ws-pagination .ws-pagination-arrow {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 9999px;
+        line-height: 1;
+        touch-action: manipulation;
+        -webkit-tap-highlight-color: transparent;
+    }
+
+    .ws-pagination .ws-pagination-arrow:active {
+        transform: none !important;
+    }
+
+    .ws-pagination .ws-pagination-arrow > svg {
+        display: block;
+        width: 18px;
+        height: 18px;
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 2;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+    }
+
+    .ws-pagination [data-slot='pagination-link'][aria-disabled='true'] {
+        opacity: 0.35;
+        pointer-events: none;
+    }
+
+    @media (max-width: 640px), (pointer: coarse) {
+        .ws-module-card-shadow {
+            filter: drop-shadow(2px 3px 4px rgb(35 20 10 / 24%));
+        }
+
+        .ws-module-card {
+            padding: 26px 13px 13px !important;
+            background-image:
+                linear-gradient(102deg, rgb(255 249 229 / 28%), rgb(205 169 105 / 13%)),
+                url('../assets/textures/rice-paper.png');
+            background-repeat: no-repeat, repeat;
+            background-size: cover, auto;
+            background-blend-mode: multiply, normal;
+            box-shadow: inset 0 0 14px rgb(94 58 26 / 12%);
+        }
+
+        .ws-module-content {
+            gap: 12px;
+        }
+
+        .ws-module-photo {
+            margin-top: -12px;
+            flex: 0 0 38%;
+            padding: 3px;
+        }
+
+        .ws-module-photo-fallback {
+            width: min(76%, 110px);
+        }
+
+        .ws-module-photo-fallback-char {
+            font-size: 36px;
+        }
+
+        .ws-module-kind-seal {
+            top: 10px;
+            right: 8px;
+            left: auto;
+            padding: 4px 8px !important;
+            font-size: 16px !important;
+        }
+
+        .ws-module-title {
+            margin-top: 3px;
+            font-size: 23px;
+        }
+
+        .ws-module-description {
+            margin-top: 7px;
+            font-size: 12px;
+            line-height: 1.45;
+            -webkit-line-clamp: 4;
+        }
+
+        .ws-module-tags {
+            max-height: 17px;
+            margin-top: 6px;
+            overflow: hidden;
+        }
+
+        .ws-module-footer {
+            gap: 6px;
+            padding-top: 7px;
+            font-size: 10px;
+        }
+
+        .ws-pagination .ws-pagination-arrow:hover {
+            background-color: transparent !important;
+        }
+    }
+}

@@ -1,0 +1,51 @@
+:root {
+    --ct-dialogue-header-height: calc(var(--st-font-size) * 2.5);
+}
+
+@theme inline {
+    --color-border: var(--border);
+    --color-c-ink-heavy: var(--ink-heavy);
+    --color-c-ink-medium: var(--ink-medium);
+    --color-c-ink-mute: var(--ink-mute);
+    --color-c-rice-paper: var(--rice-paper);
+    --font-c-zhimangxing: var(--zhimangxing);
+}
+
+@layer components {
+    .ct-dialogue-content {
+        @apply text-(length:--st-font-size) text-c-ink-heavy leading-relaxed;
+    }
+
+    .ct-dialogue-name, .ct-dialogue-name-head {
+        @apply text-shadow-md;
+    }
+
+    .ct-dialogue-name {
+        @apply font-c-zhimangxing text-[calc(var(--st-font-size)*1.5)] tracking-wide text-black;
+    }
+
+    .ct-dialogue-name-head {
+        @apply font-c-zhimangxing text-[calc(var(--st-font-size)*2.0)] text-black;
+    }
+
+    .ct-dialogue {
+        @apply py-2;
+    }
+
+    .ct-dialogue-avatar,
+    .ct-dialogue-avatar *,
+    .ct-dialogue-avatar::after {
+        border-radius: var(--radius-lg, 0.5rem) !important;
+    }
+}
+
+@layer components {
+    .ct-bg {
+        @apply bg-c-rice-paper p-6 rounded-lg border border-amber-900/15 shadow-md;
+        background-image: url("../assets/textures/handmade-paper.png");
+    }
+
+    .ct-narration {
+        @apply py-2 text-[calc(var(--st-font-size)*1.15)] text-c-ink-heavy leading-relaxed;
+    }
+}

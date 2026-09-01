@@ -1,7 +1,7 @@
 import type { ContentNode } from './content-model.ts'
 import { Fragment, type ReactNode } from 'react'
-import Dialogue from '@/beautify/Dialogue.tsx'
-import DomSlot from '@/beautify/DomSlot.tsx'
+import Dialogue from '@/content/Dialogue.tsx'
+import DomSlot from '@/content/DomSlot.tsx'
 
 type RenderContext = {
     contentHost: HTMLElement
@@ -20,7 +20,7 @@ function renderContent(node: ContentNode, { contentHost }: RenderContext): React
 
         case 'narration':
             return (
-                <div className="cx-narration">
+                <div className="ct-narration">
                     {node.children.map((child, index) => (
                         <Fragment key={index}>{renderContent(child, { contentHost })}</Fragment>
                     ))}
@@ -42,7 +42,7 @@ type ContentRendererProps = {
 
 export default function Content({ nodes, contentHost }: ContentRendererProps) {
     return (
-        <div className="cx-bg">
+        <div className="ct-bg">
             {nodes.map((node, index) => (
                 <Fragment key={index}>{renderContent(node, { contentHost })}</Fragment>
             ))}

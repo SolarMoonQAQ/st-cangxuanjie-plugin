@@ -1,6 +1,8 @@
-import { parseContent } from '@/beautify/content-parser.ts'
-import Content from '@/beautify/Content.tsx'
+import { parseContent } from '@/content/content-parser.ts'
+import Content from '@/content/Content.tsx'
 import { createRoot } from 'react-dom/client'
+import { queryClient } from '@/shared/query.ts'
+import { QueryClientProvider } from '@tanstack/react-query'
 
 type StopRender = () => void
 type RenderState = {
@@ -194,7 +196,11 @@ function renderMessage(messageElement: HTMLElement) {
 
     const restoreLeadingBreaks = hideLeadingContentBreaks(contentHost)
     const root = createRoot(mount)
-    root.render(<Content nodes={parseContent(contentHost)} contentHost={contentHost} />)
+    root.render(
+        <QueryClientProvider client={queryClient}>
+            <Content nodes={parseContent(contentHost)} contentHost={contentHost} />
+        </QueryClientProvider>,
+    )
 
     const stop = () => {
         root.unmount()

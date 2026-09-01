@@ -1,7 +1,7 @@
 import {
     CONTENT_CLOSE_TAG,
     CONTENT_OPEN_TAG,
-} from '@/beautify/content-runtime.tsx'
+} from '@/content/content-runtime.tsx'
 
 const CONTENT_PROMPT_ID = 'cangxuanjie-content-format'
 
@@ -27,7 +27,7 @@ ${CONTENT_CLOSE_TAG}
 `,
 }
 
-export function injectBeautifyPrompt() {
+export function injectContentPrompt() {
     let uninject: (() => void) | null = null
 
     const installPrompt = () => {

@@ -1,9 +1,13 @@
 import { useState } from 'react'
 import { createRoot } from 'react-dom/client'
-import Content from '@/beautify/Content.tsx'
-import { parseContent } from '@/beautify/content-parser.ts'
-import './index.css'
-import { CONTENT_TAG_NAME } from '@/beautify/content-runtime.tsx'
+import Content from '@/content/Content.tsx'
+import { parseContent } from '@/content/content-parser.ts'
+import './style/index.css'
+import { CONTENT_TAG_NAME } from '@/content/content-runtime.tsx'
+import App from '@/App.tsx'
+import { QueryClientProvider } from '@tanstack/react-query'
+import { queryClient } from '@/shared/query.ts'
+import '@/shared/i18n.ts'
 
 const PREVIEW_TEXT = `
 药芷若顺从地任他牵着走出内室，绛红色的长裙在青砖地上拖出轻微的声响绛红色的长裙在青砖地上拖出轻微的声响绛红色的长裙在青砖地上拖出轻微的声响绛红色的长裙在青砖地上拖出轻微的声响。
@@ -39,9 +43,10 @@ function Preview() {
     const nodes = parseContent(contentHost)
 
     return (
-        <main>
+        <QueryClientProvider client={queryClient}>
             <Content nodes={nodes} contentHost={contentHost} />
-        </main>
+            <App></App>
+        </QueryClientProvider>
     )
 }
 
